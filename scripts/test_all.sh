@@ -5,6 +5,7 @@ PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$PROJECT_ROOT"
 
 python -m pytest
+python -m experiments.vision.run_all all --verify-only
 python -m ruff check .
 python -m ruff format --check .
 python -m mypy

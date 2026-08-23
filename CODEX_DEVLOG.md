@@ -79,3 +79,70 @@
 - Rainbow, Mech-Eye, Mech-Vision, ROS 2 integration, and NVIDIA acceleration remain unvalidated on hardware.
 - No physical devices, vendor SDKs, private datasets, calibration artifacts, or model weights were available or introduced.
 - GPU and CUDA installation should not proceed until the workstation's NVIDIA hardware and driver state are resolved deliberately.
+
+## 2026-08-23 — v0.2 vision foundation research cycle
+
+### Execution context and baseline
+
+- Read the complete 1,571-line v0.2 Vision Foundation master prompt before making changes.
+- Re-read the v0.1 source-of-truth set, including governance, architecture, roadmap, research workflow, security/IP rules, migration evidence, environment tooling, package metadata, source, and tests.
+- Started from clean `main` at `4f17763`, with private remote `sionchu/robotics-rnd-platform`, tag `v0.1.0-bootstrap`, and no divergence from the remote.
+- Preserved the v0.1 repository boundary and core dependency rule. No KAI, vendor, customer, credential, hardware-identity, private-network, dataset, or proprietary SDK artifact was introduced.
+
+### NVIDIA/GPU checkpoint
+
+- Identified an NVIDIA GeForce RTX 5060 Laptop GPU on PCI, with the `nvidia` driver bound, NVIDIA 580.95.05 kernel modules loaded, matching DKMS state for kernel `6.8.0-31-generic`, and Secure Boot disabled.
+- Confirmed NVIDIA user-space driver libraries are installed. `nvcc` is absent, which is a CUDA Toolkit finding and is kept distinct from driver health.
+- Found that this Codex process has an isolated, user-owned `/dev` tmpfs without `/dev/nvidia*` or `/dev/dri`, even though PCI, kernel modules, and `/proc/driver/nvidia` expose the GPU. Consequently, `nvidia-smi` cannot establish native-host operability from this sandbox.
+- Classified the result as `GPU_UNKNOWN_REQUIRES_MANUAL_INTERVENTION` and recorded exact read-only host verification commands in `docs/setup/NVIDIA_GPU_STATUS.md`. No driver, CUDA, package, kernel, firmware, PRIME, or boot change was made, and no reboot was requested.
+- Enhanced `scripts/doctor.py` so it separately reports GPU detection, kernel/device usability, `nvidia-smi`, the CUDA driver library, the CUDA Toolkit compiler, Docker, and ROS 2 without leaking unique GPU identifiers.
+
+### Vision foundation implementation
+
+- Added reusable camera models, distortion coefficients, image-source contracts, calibration observations/results, reprojection metrics, deterministic fixture sources, and human-readable calibration serialization.
+- Added an OpenCV-backed camera calibration adapter and AprilTag detector while retaining OpenCV outside `robotics_rnd.core`; architecture tests enforce the boundary.
+- Added generic AprilTag observations with documented TL/TR/BR/BL corner order, timestamps, frame/image metadata, and quality fields without leaking OpenCV objects through public models.
+- Added planar-square PnP using IPPE Square with an iterative fallback for gross frontal degeneracy, explicit `T_camera_tag` semantics, reprojection helpers, pose-error metrics, and Rodrigues/transform conversion.
+- Added a versioned benchmark schema and a CLI covering calibration, AprilTag detection, and PnP demonstration workflows.
+- Used Python 3.12 and optional `opencv-python-headless` 4.14.0.94. No CUDA, ROS, or vendor dependency was added to the reusable vision foundation.
+
+### Research cycle and decisions
+
+- `001_camera_calibration`: 28 deterministic synthetic checkerboard views, 9×6 inner corners, 0.03 m square size, and 0.15 px corner noise. Estimated focal-length errors were 0.09495% (`fx`) and 0.09414% (`fy`); principal-point error was 0.510725 px; RMS/mean/max reprojection error was 0.205603/0.183197/0.593588 px. Decision: `PROMOTE_TO_PLATFORM`.
+- `002_apriltag_detection`: AprilTag 36h11 fixtures covered baseline, scale, translation, rotation, perspective, blur, noise, and combined degradation. Detection and ID accuracy were 8/8, mean corner RMSE was 0.418508 px, and the latest uncontrolled CPU timing snapshot was 4.32634 ms/frame. Decision: `PROMOTE_TO_PLATFORM`.
+- `003_apriltag_pnp_pose`: exact synthetic cases had maximum translation error `4.962419e-11` m, maximum orientation error 0 degrees, and maximum mean reprojection error `6.03653e-9` px. The raster detector-to-PnP case had 0.005047489 m translation error, 1.133312-degree orientation error, and 0.294247 px mean reprojection error. Decision: `PROMOTE_TO_PLATFORM`.
+- `004_transform_chain`: 100 deterministic cases verified `T_base_tag = T_base_camera @ T_camera_tag`; maximum composition and inverse-recovery matrix errors were `8.326673e-16` and `8.881784e-16`. A reversed chain was rejected. Decision: `PROMOTE_TO_PLATFORM`.
+- `005_pose_sensitivity`: 30 PnP trials per level plus 12 detection/PnP blur trials quantified distance, apparent tag size, tilt, corner noise, intrinsic error, and blur. At 1.6 m and about 66.9 px/tag edge, mean translation/orientation errors reached 9.419 mm/3.420 degrees; at 2 px corner noise they reached 9.651 mm/7.810 degrees; 2% intrinsic perturbation produced 18.484 mm/5.138 degrees while reprojection error remained 0.469 px; blur sigma 5 reduced detection success to 25%. Decision: `CONTINUE_RESEARCH`.
+- Every experiment records its question, hypothesis, method, environment, data, metrics, results, failure cases, limitations, conclusion, and decision. All data are deterministic synthetic fixtures; no physical-camera or hardware-validity claim is made.
+
+### Promotion and documentation
+
+- Promoted only generic, tested components: camera/corner models, calibration and serialization, reprojection metrics, AprilTag observation/detection, PnP, pose metrics, transform validation, deterministic sources, benchmark schema, and CLI entry points.
+- Added `docs/research/VISION_FOUNDATION_PROMOTION.md` with origin, evidence, responsibility, assumptions, limitations, and disposition for each candidate component.
+- Added canonical camera/tag/frame/corner/PnP conventions and future integration guidance for Rainbow Robotics, Mech-Eye/Mech-Vision, Raspberry Pi, optional ROS 2, and NVIDIA acceleration.
+- Updated the architecture, roadmap, learning roadmap, research workflow entry points, and official resources without treating implemented evidence as proof of personal mastery or hardware validation.
+
+### Verification
+
+- Python: `48 passed`.
+- Research acceptance groups: calibration, AprilTag, PnP, transform chain, and sensitivity all passed in verify-only mode.
+- Ruff lint: passed; Ruff format: 189 files already formatted.
+- Mypy strict source check: `Success: no issues found in 69 source files`.
+- C++ configure/build: passed; CTest: `1/1` passed.
+- Environment doctor and deterministic mock guidance application: passed.
+- Pre-commit, staged-diff/IP audit, final GitHub Actions state, push, and release-tag outcome are recorded by the final checkpoint commit and remote state after those gates complete.
+
+### Commit checkpoints
+
+- `dd004e3` — `docs: record NVIDIA GPU diagnosis`
+- `40f2c07` — `feat(vision): add calibrated camera and pose foundation`
+- `e2888eb` — `exp: add reproducible vision foundation studies`
+- `8cfc1da` — `docs: connect vision foundation to future guidance`
+- Final CI/devlog checkpoint: the commit containing this entry.
+
+### Unresolved constraints and next evidence
+
+- Native-host `nvidia-smi` must be run outside this sandbox before GPU operability or CUDA readiness can be claimed.
+- The calibration, detection, pose, transform, and sensitivity evidence is synthetic. Lens behavior, exposure, motion blur, rolling shutter, print/target tolerances, focus, camera timing, and real device frames remain unmeasured.
+- No live camera, physical AprilTag, robot, Mech-Eye, Mech-Vision, ROS graph, vendor SDK, or safety-critical motion was used.
+- The next research cycle should validate the same acceptance metrics with a live camera and measured target before integrating robot motion or vendor-specific 3D vision.

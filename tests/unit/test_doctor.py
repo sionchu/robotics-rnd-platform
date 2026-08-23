@@ -7,9 +7,7 @@ def write_gpu_fixture(root: Path) -> tuple[Path, Path]:
     proc_root = root / "proc" / "0000:04:00.0"
     proc_root.mkdir(parents=True)
     (proc_root / "information").write_text(
-        "Model: NVIDIA Test GPU\n"
-        "GPU UUID: GPU-private-value-must-not-leak\n"
-        "Bus Location: 0000:04:00.0\n",
+        "Model: NVIDIA Test GPU\nGPU UUID: GPU-private-value-must-not-leak\nBus Location: 0000:04:00.0\n",
         encoding="utf-8",
     )
     pci_root = root / "pci"
