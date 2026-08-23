@@ -70,3 +70,24 @@ For `SOLVEPNP_IPPE_SQUARE`, corresponding tag-frame points are:
 
 Tests reject reversed corner winding, mismatched image sizes/frames, invalid tag
 size, and reversed transform composition.
+
+## Capture configuration, resize, and crop
+
+`CaptureMetadata` distinguishes camera receive timing and configuration from
+the image array. Dataset manifests separately record sensor capture resolution,
+stored image resolution, and algorithm input resolution.
+
+For a pure full-frame resize with scale `(sx, sy)`, `CameraIntrinsics.scaled_to`
+applies `fx,cx *= sx` and `fy,cy *= sy`. The default rejects changed aspect ratio.
+OpenCV distortion coefficients remain unchanged for this pixel-coordinate
+resize. This rule does not cover sensor-mode changes, binning, arbitrary crop,
+or digital zoom.
+
+Calibration provenance binds sensor model/class, mode, capture/calibration
+resolution, pixel format, and `ScalerCrop`. A mismatch raises an error instead
+of silently reusing intrinsics. The first Pi lab keeps full-frame/no-custom-crop
+configuration; cropped evidence requires a separately justified model.
+
+`SensorTimestamp`, Pi monotonic receive time, UTC orchestration time, processing
+time, and filesystem time are distinct. Filesystem modification time is never a
+camera timestamp.

@@ -1,3 +1,4 @@
+from datetime import UTC, datetime
 from pathlib import Path
 
 import numpy as np
@@ -8,10 +9,17 @@ from robotics_rnd.vision.calibration import (
     CalibrationObservation,
     CheckerboardSpec,
     calibrate_checkerboard,
+    extract_checkerboard_observations,
     load_calibration_json,
     save_calibration_json,
 )
-from robotics_rnd.vision.camera import CameraIntrinsics, CameraModel, DistortionCoefficients, ImageSize
+from robotics_rnd.vision.camera import (
+    CameraIntrinsics,
+    CameraModel,
+    DistortionCoefficients,
+    ImageFrame,
+    ImageSize,
+)
 from robotics_rnd.vision.camera.synthetic import generate_checkerboard_observations
 
 
@@ -98,3 +106,21 @@ def test_camera_and_observation_validation() -> None:
             np.zeros((4, 3)),
             np.zeros((3, 2)),
         )
+
+
+def test_checkerboard_is_extracted_from_generic_image_frame() -> None:
+    square_px = 50
+    columns, rows = 10, 7
+    image = np.full((rows * square_px + 60, columns * square_px + 60), 255, dtype=np.uint8)
+    for row in range(rows):
+        for column in range(columns):
+            if (row + column) % 2 == 0:
+                image[
+                    30 + row * square_px : 30 + (row + 1) * square_px,
+                    30 + column * square_px : 30 + (column + 1) * square_px,
+                ] = 0
+    frame = ImageFrame(FrameId("camera"), datetime(2026, 8, 23, tzinfo=UTC), image, "board")
+    result = extract_checkerboard_observations((frame,), CheckerboardSpec(9, 6, 0.025))
+    assert len(result.observations) == 1
+    assert result.rejected_source_ids == ()
+    assert result.observations[0].image_points_px.shape == (54, 2)

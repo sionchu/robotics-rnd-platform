@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/robotics-rnd/pi-hardware-manifest-v1",
+  "title": "Sanitized Raspberry Pi camera hardware manifest",
+  "type": "object",
+  "required": [
+    "schema",
+    "device_role",
+    "board_model",
+    "architecture",
+    "os",
+    "kernel",
+    "python",
+    "rpicam_apps",
+    "camera_inventory",
+    "timestamp",
+    "hardware_validated"
+  ],
+  "properties": {
+    "schema": {"const": "robotics-rnd-pi-hardware-manifest-v1"},
+    "device_role": {"const": "edge-vision-node"},
+    "board_model": {"type": ["string", "null"]},
+    "architecture": {"type": "string"},
+    "os": {"type": ["string", "null"]},
+    "kernel": {"type": "string"},
+    "python": {"type": "string"},
+    "picamera2": {"type": ["string", "null"]},
+    "opencv": {"type": ["string", "null"]},
+    "rpicam_apps": {"type": "object"},
+    "camera_inventory": {"type": "object"},
+    "timestamp": {"type": "string", "format": "date-time"},
+    "hardware_validated": {"const": true},
+    "privacy": {"type": "string"}
+  },
+  "additionalProperties": false
+}

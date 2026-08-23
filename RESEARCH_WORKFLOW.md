@@ -36,6 +36,11 @@ Applications choose adapters and configuration at the composition root. They do
 not push vendor, ROS, GUI, or process-specific types back into core. Record real
 hardware validation separately from mock, replay, and simulation results.
 
+When hardware is unavailable, prepare schemas, adapters, replay, tests, and an
+exact handoff, but keep measurements null and use
+`NOT_RUN_HARDWARE_UNAVAILABLE`. Hardware-dependent release tags and promotion
+remain blocked until physical evidence exists.
+
 ## Graduation checklist
 
 - Question, hypothesis, environment, reproduction steps, metrics, observations,

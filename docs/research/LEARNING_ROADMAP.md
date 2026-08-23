@@ -28,6 +28,14 @@ Statuses describe repository evidence, not the user's personal mastery:
 | 20 | 3D vision / point clouds | NOT_STARTED | Acquisition-independent filtering/registration benchmark | Mech-Eye lab |
 | 21 | CUDA / ONNX / TensorRT | NOT_STARTED | Resolve native GPU access, then benchmark a justified workload | GPU robotics |
 | 22 | Simulation / Physical AI | NOT_STARTED | Reproducible simulator scenario with sim-to-real assumptions | Digital twin |
+| 23 | Camera sensors and ISP | REFERENCE_CREATED | Identify the actual Pi sensor pipeline, pixel format, crop, and ISP stages | Edge capture correctness |
+| 24 | Rolling shutter and motion blur | EXPERIMENT_AVAILABLE | Execute experiment 011 with controlled safe motion/exposure | Dynamic vision limits |
+| 25 | Exposure, gain, white balance, focus | EXPERIMENT_AVAILABLE | Compare auto/controlled metadata without inventing unsupported focus | Repeatable imaging |
+| 26 | Camera timestamps | EXPERIMENT_AVAILABLE | Compare sensor, monotonic receive, processing, and file times | Latency/jitter honesty |
+| 27 | Physical calibration repeatability | EXPERIMENT_AVAILABLE | Run three measured-target calibration subsets | Real intrinsic evidence |
+| 28 | Printed-target and measurement uncertainty | REFERENCE_CREATED | Print/measure the tag and justify reported significant figures | Ground-truth honesty |
+| 29 | ARM64 packaging and remote Linux | EXPERIMENT_AVAILABLE | Dry-run wheel/rsync, inspect, deploy, fetch without credentials | Edge portability |
+| 30 | Latency versus throughput | EXPERIMENT_AVAILABLE | Run identical Pi/laptop replay with warm-up and resource notes | Edge benchmark design |
 
 Each topic follows: theory -> runnable example -> user exercise -> experiment ->
 project application. Codex implementation alone never marks user study complete.

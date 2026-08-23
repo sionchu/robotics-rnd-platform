@@ -1,0 +1,14 @@
+{
+  "experiment": "011_pi_capture_conditions",
+  "proposed_conditions": [
+    "normal_auto",
+    "normal_controlled",
+    "lower_illumination_controlled",
+    "higher_illumination_controlled",
+    "motion_blur_controlled",
+    "defocus_only_if_supported"
+  ],
+  "frames_per_safe_condition": 100,
+  "unsafe_lighting": false,
+  "actual_conditions": null
+}

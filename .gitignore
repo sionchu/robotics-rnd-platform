@@ -43,6 +43,7 @@ compile_commands.json
 *.lib
 
 # Data, models, captures, bags, and media
+datasets/local/**
 datasets/raw/**
 datasets/processed/**
 models/pretrained/**

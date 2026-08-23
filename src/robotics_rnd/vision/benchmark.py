@@ -23,6 +23,8 @@ class VisionBenchmarkResult:
     fps: float
     success_rate: float
     memory_mb: float | None = None
+    cpu_utilization_percent: float | None = None
+    stage_latencies_ms: Mapping[str, float] = field(default_factory=dict)
     accuracy_metrics: Mapping[str, float] = field(default_factory=dict)
     software_versions: Mapping[str, str] = field(default_factory=dict)
 
@@ -38,9 +40,16 @@ class VisionBenchmarkResult:
             raise ValueError("benchmark success rate must be in [0, 1]")
         if self.memory_mb is not None and (not isfinite(self.memory_mb) or self.memory_mb < 0.0):
             raise ValueError("benchmark memory must be finite non-negative megabytes")
+        if self.cpu_utilization_percent is not None and (
+            not isfinite(self.cpu_utilization_percent) or self.cpu_utilization_percent < 0.0
+        ):
+            raise ValueError("benchmark CPU utilization must be finite and non-negative")
+        if not all(isfinite(value) and value >= 0.0 for value in self.stage_latencies_ms.values()):
+            raise ValueError("benchmark stage latencies must be finite non-negative milliseconds")
         if not all(isfinite(value) for value in self.accuracy_metrics.values()):
             raise ValueError("benchmark accuracy metrics must be finite")
         object.__setattr__(self, "accuracy_metrics", MappingProxyType(dict(self.accuracy_metrics)))
+        object.__setattr__(self, "stage_latencies_ms", MappingProxyType(dict(self.stage_latencies_ms)))
         object.__setattr__(self, "software_versions", MappingProxyType(dict(self.software_versions)))
 
     def to_dict(self) -> dict[str, Any]:
@@ -57,6 +66,8 @@ class VisionBenchmarkResult:
             "latency_ms": self.latency_ms,
             "fps": self.fps,
             "memory_mb": self.memory_mb,
+            "cpu_utilization_percent": self.cpu_utilization_percent,
+            "stage_latencies_ms": dict(self.stage_latencies_ms),
             "success_rate": self.success_rate,
             "accuracy_metrics": dict(self.accuracy_metrics),
             "software_versions": dict(self.software_versions),

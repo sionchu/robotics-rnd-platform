@@ -11,6 +11,7 @@ from numpy.typing import NDArray
 
 from robotics_rnd.core import FrameId
 
+from .metadata import CaptureMetadata
 from .models import ImageSize
 
 
@@ -20,6 +21,7 @@ class ImageFrame:
     timestamp: datetime
     image: NDArray[np.uint8]
     source_id: str
+    capture_metadata: CaptureMetadata | None = None
 
     def __post_init__(self) -> None:
         if self.timestamp.tzinfo is None:
@@ -34,6 +36,8 @@ class ImageFrame:
         copy = image.copy()
         copy.flags.writeable = False
         object.__setattr__(self, "image", copy)
+        if self.capture_metadata is not None and self.capture_metadata.capture_size != self.image_size:
+            raise ValueError("capture metadata image size must match the image array")
 
     @property
     def image_size(self) -> ImageSize:

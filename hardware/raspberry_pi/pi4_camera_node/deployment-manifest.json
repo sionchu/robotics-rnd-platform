@@ -1,0 +1,19 @@
+{
+  "schema": "robotics-rnd-edge-deployment-v1",
+  "milestone": "v0.2.1-preparation",
+  "artifact": "Python wheel built from the current reviewed Git commit",
+  "target_architecture": "aarch64",
+  "runtime_entrypoint": "python3 -m robotics_rnd.edge",
+  "external_adapter_dependency": "Picamera2 from the supported Raspberry Pi OS environment",
+  "included": [
+    "robotics-rnd-platform wheel",
+    "this deployment manifest"
+  ],
+  "excluded": [
+    "Git history",
+    "research datasets",
+    "credentials and SSH configuration",
+    "x86_64 binaries and virtual environments",
+    "ROS 2, CUDA, vendor SDKs, and models"
+  ]
+}

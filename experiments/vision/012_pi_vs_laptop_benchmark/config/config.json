@@ -1,0 +1,18 @@
+{
+  "experiment": "012_pi_vs_laptop_benchmark",
+  "same_dataset_required": true,
+  "same_tag_and_calibration_required": true,
+  "targets": ["raspberry_pi_cpu", "ubuntu_laptop_cpu"],
+  "gpu_enabled": false,
+  "required_metrics": [
+    "detector_pnp_latency_ms",
+    "fps",
+    "cpu_utilization_percent",
+    "memory_mb",
+    "detection_disagreements",
+    "max_corner_delta_px",
+    "max_translation_delta_m",
+    "max_orientation_delta_deg"
+  ],
+  "dataset_id": null
+}

@@ -27,6 +27,7 @@ jobs:
       - run: python -m mypy
       - run: python -m pytest -m "not hardware and not gpu and not simulation and not vendor and not slow"
       - run: python -m experiments.vision.run_all all --verify-only
+      - run: python -m experiments.vision.pi_edge verify-preparation
 
   cpp:
     name: cpp (${{ matrix.os }})

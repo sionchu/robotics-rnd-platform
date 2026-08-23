@@ -58,6 +58,31 @@ class CameraIntrinsics:
             dtype=np.float64,
         )
 
+    def scaled_to(
+        self,
+        image_size: ImageSize,
+        *,
+        require_same_aspect_ratio: bool = True,
+    ) -> CameraIntrinsics:
+        """Scale pixel intrinsics for a pure full-frame image resize.
+
+        Distortion coefficients are not part of this value and remain unchanged
+        for a pure resize. Cropping, binning, or a changed sensor mode requires a
+        separately bound calibration rather than this helper.
+        """
+
+        scale_x = image_size.width_px / self.image_size.width_px
+        scale_y = image_size.height_px / self.image_size.height_px
+        if require_same_aspect_ratio and not np.isclose(scale_x, scale_y, rtol=0.0, atol=1.0e-12):
+            raise ValueError("image resize changes aspect ratio; calibration cannot be scaled implicitly")
+        return CameraIntrinsics(
+            fx_px=self.fx_px * scale_x,
+            fy_px=self.fy_px * scale_y,
+            cx_px=self.cx_px * scale_x,
+            cy_px=self.cy_px * scale_y,
+            image_size=image_size,
+        )
+
 
 @dataclass(frozen=True, slots=True)
 class DistortionCoefficients:

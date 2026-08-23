@@ -1,0 +1,10 @@
+{
+  "experiment": "009_pi_distance_sensitivity",
+  "proposed_distance_m": [0.3, 0.5, 1.0, 1.5, 2.0],
+  "frames_per_feasible_distance": 100,
+  "distance_m": null,
+  "distance_uncertainty_m": null,
+  "tag_size_measured_m": null,
+  "camera_reference_point": null,
+  "omit_conditions_with_unreliable_tag_scale": true
+}

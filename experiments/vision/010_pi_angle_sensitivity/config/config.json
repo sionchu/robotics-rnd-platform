@@ -1,0 +1,8 @@
+{
+  "experiment": "010_pi_angle_sensitivity",
+  "proposed_angle_deg_nominal": [-45, -30, -15, 0, 15, 30, 45],
+  "frames_per_reproducible_angle": 100,
+  "angle_measurement_tool": null,
+  "angle_uncertainty_deg": null,
+  "treat_unmeasured_angles_as_qualitative": true
+}

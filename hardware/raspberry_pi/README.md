@@ -5,7 +5,11 @@ The Pi is an edge target, not the architecture center. Select Raspberry Pi OS
 Use SSH keys and host aliases outside the repository; never commit addresses or
 credentials.
 
-Initial lab plan:
+The v0.2.1 non-hardware implementation is under `pi4_camera_node/`. Hardware
+status is `PREPARATION_COMPLETE_HARDWARE_VALIDATION_PENDING` because the
+configured Pi alias was unreachable.
+
+Lab plan:
 
 1. Record OS/kernel/Python/camera/thermal/power versions.
 2. Validate `rpicam-apps`/libcamera or the chosen Ubuntu camera path.

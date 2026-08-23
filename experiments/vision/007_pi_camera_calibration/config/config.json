@@ -1,0 +1,14 @@
+{
+  "experiment": "007_pi_camera_calibration",
+  "target": "checkerboard",
+  "inner_corners": [9, 6],
+  "square_size_measured_m": null,
+  "minimum_accepted_views_per_run": 20,
+  "independent_runs": 3,
+  "coverage": ["centre", "left", "right", "top", "bottom", "near", "far", "positive_tilt", "negative_tilt", "roll"],
+  "compare_auto_and_controlled_if_supported": true,
+  "sensor": null,
+  "camera_mode": null,
+  "resolution": null,
+  "scaler_crop": null
+}

@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/robotics-rnd/capture-dataset-v1",
+  "title": "Robotics R&D capture dataset manifest",
+  "type": "object",
+  "required": [
+    "schema",
+    "session_id",
+    "source_id",
+    "frame_id",
+    "capture_size_px",
+    "stored_size_px",
+    "algorithm_size_px",
+    "pixel_format",
+    "camera_mode",
+    "capture_purpose",
+    "ground_truth_class",
+    "frames",
+    "hardware_validated"
+  ],
+  "properties": {
+    "schema": {"const": "robotics-rnd-capture-dataset-v1"},
+    "session_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{2,63}$"},
+    "source_id": {"type": "string"},
+    "frame_id": {"type": "string"},
+    "capture_size_px": {"$ref": "#/$defs/size"},
+    "stored_size_px": {"$ref": "#/$defs/size"},
+    "algorithm_size_px": {"$ref": "#/$defs/size"},
+    "pixel_format": {"type": "string"},
+    "camera_mode": {"type": "string"},
+    "capture_purpose": {"type": "string"},
+    "scaler_crop": {
+      "type": ["array", "null"],
+      "prefixItems": [
+        {"type": "integer", "minimum": 0},
+        {"type": "integer", "minimum": 0},
+        {"type": "integer", "minimum": 1},
+        {"type": "integer", "minimum": 1}
+      ],
+      "minItems": 4,
+      "maxItems": 4
+    },
+    "ground_truth_class": {"type": "string"},
+    "frames": {"type": "array"},
+    "hardware_validated": {"type": "boolean"}
+  },
+  "$defs": {
+    "size": {
+      "type": "object",
+      "required": ["width", "height"],
+      "properties": {
+        "width": {"type": "integer", "minimum": 1},
+        "height": {"type": "integer", "minimum": 1}
+      }
+    }
+  }
+}

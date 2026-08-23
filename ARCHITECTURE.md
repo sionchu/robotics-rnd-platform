@@ -79,6 +79,14 @@ Calibration and tag geometry use metres; image coordinates and reprojection use
 pixels. See `docs/research/VISION_FOUNDATION_PROMOTION.md` for evidence and
 limitations of each promoted component.
 
+The v0.2.1 edge path adds `Picamera2 -> PiCameraSource -> ImageFrame +
+CaptureMetadata -> dataset/replay`. Picamera2 is imported lazily only under
+`drivers/raspberry_pi`; generic camera, calibration, dataset, analysis, and pose
+models contain no Pi object. Capture, stored, and algorithm resolutions are
+separate. Calibration provenance binds sensor class, mode, resolution, pixel
+format, and crop; pure full-frame resize scales intrinsics only through a tested
+explicit helper. Hardware absence never blocks core, replay, or CI.
+
 Raspberry Pi and Jetson are deployment targets. ROS 2 and Isaac ROS are
 integrations. The repository must remain useful when all of them are absent.
 

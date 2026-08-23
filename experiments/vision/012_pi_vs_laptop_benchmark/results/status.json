@@ -1,0 +1,9 @@
+{
+  "schema": "robotics-rnd-hardware-experiment-status-v1",
+  "experiment": "012_pi_vs_laptop_benchmark",
+  "status": "NOT_RUN_HARDWARE_UNAVAILABLE",
+  "hardware_validated": false,
+  "ground_truth_class": "ALGORITHM_GROUND_TRUTH",
+  "measurements": null,
+  "decision": "CONTINUE_RESEARCH"
+}

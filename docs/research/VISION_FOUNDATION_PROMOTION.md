@@ -18,3 +18,13 @@ Date: 2026-08-23. All evidence is synthetic/replay-only.
 
 Promotion means the API is reusable for continued research. It does not mean
 hardware accuracy, production safety, or vendor compatibility is established.
+
+## v0.2.1 preparation disposition
+
+Hardware-independent additions—capture metadata, dataset validation/replay,
+calibration configuration binding, pure-resize intrinsic scaling, repeatability,
+and pose-run equivalence—have deterministic unit tests and are reusable research
+infrastructure. `PiCameraSource`, remote deployment, capture controls, and every
+experiment 006–012 result remain `CONTINUE_RESEARCH`: no Pi or camera was
+reachable, so no hardware-specific component is promoted as validated and no
+physical performance claim is made.

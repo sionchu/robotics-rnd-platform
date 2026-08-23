@@ -55,7 +55,10 @@ def save_calibration_json(result: CameraCalibrationResult, path: Path) -> None:
 
 
 def load_calibration_json(path: Path) -> CameraCalibrationResult:
-    document = json.loads(path.read_text(encoding="utf-8"))
+    return calibration_from_dict(json.loads(path.read_text(encoding="utf-8")))
+
+
+def calibration_from_dict(document: dict[str, Any]) -> CameraCalibrationResult:
     if document.get("schema") != "robotics-rnd-camera-calibration-v1":
         raise ValueError("unsupported calibration schema")
     size = document["image_size_px"]

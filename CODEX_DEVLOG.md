@@ -278,7 +278,65 @@
 ### Git checkpoint
 
 - `2506f3b` — `feat(exchange): add workcell manifest contract`
-- `origin/main` remained at `c01e9a1`; no rebase, force-push, merge, or release
-  tag was performed in this cycle.
-- Next action: complete the final documentation/CI checkpoint and open a normal
-  PR from `win/bootstrap-desktop` into `main`.
+- The feature work started from `origin/main` at `c01e9a1`. Before PR handoff,
+  `main` advanced to the Raspberry Pi edge milestone at `a545a2b`; that history
+  was merged into the task branch without rebasing the published branch or
+  force-pushing.
+- Next action: re-run the combined regression and open a normal PR from
+  `win/bootstrap-desktop` into `main`.
+
+## 2026-08-23 — v0.2.1 Raspberry Pi camera edge preparation
+
+### Baseline and execution boundary
+
+- Read the complete 2,264-line v0.2.1 Raspberry Pi Camera & Edge Vision master prompt and re-inspected the required v0.2 source of truth, source, tests, experiments, Git history, and release tags.
+- Started from clean, synchronized `main` at `c01e9a1`, tagged `v0.2.0-vision-foundation`. The unchanged baseline passed 48 Python tests, all five v0.2 experiment gates, Ruff, formatting, mypy over 69 source files, CMake, and CTest.
+- Attempted a bounded, read-only SSH connection through `ROBOTICS_RND_PI_HOST` or the default `pi-rnd` alias using batch authentication, strict host-key checking, and no network scan. No authenticated session could be established.
+- Classified every physical experiment as `NOT_RUN_HARDWARE_UNAVAILABLE`. No Pi model, OS, kernel, camera sensor, mode, control, frame, calibration, pose, timing, resource, or benchmark value was assumed or fabricated.
+- Preserved Git history, v0.1/v0.2 architecture and conventions, private-repository/IP boundaries, metres/radians/XYZW, `T_target_source`, and hardware-independent CI.
+
+### Edge adapter and capture implementation
+
+- Added an optional `PiCameraSource` under `drivers/raspberry_pi` with lazy Picamera2 import, explicit open/configure/start/read/stop/close lifecycle, capability discovery, supported-control rejection, warm-up, request-scoped array/metadata capture, and no SDK-object leakage.
+- Added normalized, platform-owned camera capability and capture metadata values for sensor/receive timestamps, exposure, analogue/digital gain, colour gains, lens position, frame duration, pixel format, resolution, crop, and sequence index.
+- Selected `BGR888` as the documented initial analysis format while allowing explicit `RGB888`; no color conversion occurs inside the adapter.
+- Added single, burst, timed, calibration, and AprilTag-repeatability capture modes, disk-space/output validation, per-frame PNG/JSON output, neutral session identifiers, and actionable no-hardware errors.
+
+### Dataset, calibration, replay, and analysis
+
+- Added versioned capture manifest/file validation with safe relative paths, ordered timestamps/sequences, configuration/crop consistency, physical ground-truth classification, and ignored `datasets/local/pi_camera` storage.
+- Added deterministic on-disk dataset replay through generic `ImageFrame`, with capture/stored/algorithm resolution kept distinct.
+- Added calibration image corner extraction, sensor/mode/resolution/format/crop provenance binding, JSON artifact round-trip, mismatch rejection, and explicit same-aspect full-frame intrinsic scaling.
+- Added CLI commands to calibrate captured checkerboard datasets and compare at least three configuration-compatible calibration artifacts.
+- Added per-frame pose samples, detection success, translation/orientation/corner/timing/reprojection repeatability, Pi/laptop pose-run equivalence, detector/PnP/end-to-end timing, CPU utilization, and peak-memory benchmark fields.
+- Added structured multi-condition JSON/CSV aggregation and optional Matplotlib plots; no notebook is required for reproduction.
+
+### Deployment and measurement workflow
+
+- Added strict, credential-free Pi doctor, dry-run-first wheel deployment, capture, fetch, and edge benchmark scripts. Sync never uses `--delete`; deployment excludes Git history, datasets, credentials, x86 environments/binaries, ROS, CUDA, vendor SDKs, and models.
+- Added a pure-Python/OpenCV SVG generator for `tag36h11` id 7 with a nominal outer dimension, 100 mm scale reference, 100%-print warning, and mandatory physical measurement instruction.
+- Added sanitized hardware/capture JSON schemas, Raspberry Pi node setup/control/deployment documentation, a physical-measurement template, full measurement protocol, lab checklist, and exact nine-gate hardware handoff.
+- Verified current official Raspberry Pi OS, camera software, `rpicam-apps`, Picamera2 manual/release, libcamera, and future ROS 2 Jazzy-on-Pi references. No package or OS change was made.
+
+### Experiments 006–012
+
+- Prepared Pi bring-up, real calibration, static AprilTag repeatability, distance sensitivity, angle sensitivity, capture-condition sensitivity, and Pi-vs-laptop replay benchmark directories.
+- Every conclusion records Question, Hypothesis, Hardware, Software, Method, Ground truth class, Measurement uncertainty, Results, Failure cases, Limitations, Conclusion, and Decision.
+- Every status artifact has `hardware_validated: false`, `measurements: null`, `status: NOT_RUN_HARDWARE_UNAVAILABLE`, and decision `CONTINUE_RESEARCH`. The preparation verifier rejects any inconsistent or fabricated value.
+- No Pi-specific or physical component was promoted as hardware-validated. Hardware-independent capture metadata, dataset/replay, calibration binding/scaling, repeatability, and equivalence utilities are reusable based only on deterministic test evidence.
+
+### Verification and Git checkpoints
+
+- Python: `61 passed, 1 skipped`; the skip is the explicitly opt-in `ROBOTICS_RND_RUN_HARDWARE=1` live Pi camera test.
+- v0.2 synthetic/replay acceptance groups: all five passed unchanged.
+- v0.2.1 preparation groups: all seven present, hardware-pending, measurements null, and no release tag allowed.
+- Ruff lint/format passed; mypy passed over 80 source files; Bash syntax checks passed; CMake/build and CTest `1/1` passed.
+- `a837058` — `feat(pi): add edge camera capture and replay boundary`
+- `001f73f` — `exp(pi): prepare physical camera research cycle`
+- Final documentation/verification checkpoint: the commit containing this entry.
+
+### Release status and remaining evidence
+
+- v0.2.1 preparation is complete, but the milestone is not physically complete. Per the master prompt, `v0.2.1-pi-camera-edge-lab` must not be created until real Pi/camera gates pass.
+- The exact next action is `docs/research/PI_CAMERA_HARDWARE_HANDOFF.md`: establish reviewed SSH reachability, detect the actual sensor/modes, capture and measure targets/data, run three real calibrations, real AprilTag/PnP/repeatability/sensitivity, and same-dataset Pi/laptop comparison.
+- RB control, Mech-Eye/Mech-Vision, ROS 2 edge publishing, Jetson/CUDA, network streaming, and live robot motion remain out of scope and unvalidated.
