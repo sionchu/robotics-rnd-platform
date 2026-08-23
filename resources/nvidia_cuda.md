@@ -11,7 +11,20 @@
 | Why it matters | Official source for reproducible GPU research |
 | Learning module | `learning/12_cuda_tensorrt` |
 | Project/application | Future GPU perception benchmarks |
-| Local notes | Current workstation has no usable NVIDIA driver or `nvcc`; do CPU baselines first |
+| Local notes | RTX 5060 Laptop GPU and driver 580 are kernel-visible; Codex lacks host `/dev` access, so native `nvidia-smi` remains a manual gate. `nvcc` is a separate absent Toolkit component. |
+
+| Field | Value |
+|---|---|
+| Title | CUDA Installation Guide for Linux |
+| Provider | NVIDIA |
+| URL | https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html |
+| Purpose | Separates driver validation, runtime libraries, Toolkit, and compiler installation |
+| Version/release | 13.3 documentation when verified |
+| Date last verified | 2026-08-23 |
+| Why it matters | Prevents treating absent `nvcc` as an NVIDIA driver failure |
+| Learning module | `learning/12_cuda_tensorrt` |
+| Project/application | `docs/setup/NVIDIA_GPU_STATUS.md` and future GPU benchmarks |
+| Local notes | No CUDA or driver package was installed during v0.2 |
 
 | Field | Value |
 |---|---|

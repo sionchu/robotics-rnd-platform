@@ -23,7 +23,8 @@ Drivers and integrations (ROS 2, TCP, GUI, vendor SDKs)
 
 1. `robotics_rnd.core` depends only on the Python standard library and NumPy.
 2. `robotics_rnd.robot` and `robotics_rnd.vision` depend on core contracts, not
-   on drivers.
+   on drivers. Vision may use NumPy and its explicit optional OpenCV dependency;
+   raw OpenCV values are converted before reaching core or public observations.
 3. Skills depend on interfaces, never concrete hardware adapters.
 4. Drivers may depend on vendor SDKs, but their public methods accept and return
    platform models only.
@@ -35,7 +36,7 @@ Drivers and integrations (ROS 2, TCP, GUI, vendor SDKs)
    CUDA, or vendor SDKs.
 
 Architecture tests scan core imports for `rclpy`, `rbpodo`, Mech-Eye modules,
-Raspberry Pi modules, and CUDA/Isaac dependencies.
+Raspberry Pi modules, OpenCV, and CUDA/Isaac dependencies.
 
 ## Coordinate and unit convention
 
@@ -68,6 +69,12 @@ skeleton; `rbpodo` must never leak through its public API.
 `ReplayVision` prove deterministic behavior. Direct Mech-Eye capture and
 Mech-Vision result-provider paths are separate adapters because they own
 different responsibilities.
+
+The v0.2 image path is `ImageSource -> detector -> pose estimator -> Transform
+-> metrics`. Camera arrays and OpenCV `rvec/tvec` stay within the vision package.
+Calibration and tag geometry use metres; image coordinates and reprojection use
+pixels. See `docs/research/VISION_FOUNDATION_PROMOTION.md` for evidence and
+limitations of each promoted component.
 
 Raspberry Pi and Jetson are deployment targets. ROS 2 and Isaac ROS are
 integrations. The repository must remain useful when all of them are absent.

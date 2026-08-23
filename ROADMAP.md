@@ -8,12 +8,13 @@ Ubuntu diagnostics, Git/CI, Python/C++ baselines, core models/interfaces,
 mocks/replay, adapter skeletons, research workflow, migration evidence, and
 hardware-free gates.
 
-## Phase 1 — Robotics math and vision foundation (`NEXT`)
+## Phase 1 — Robotics math and vision foundation (`DONE`)
 
 Coordinate-frame exercises; camera model; OpenCV calibration; AprilTag/ArUco;
-PnP; reprojection/error analysis; recorded generic fixtures; benchmark report.
+PnP; reprojection/error analysis; recorded generic fixtures; sensitivity study;
+benchmark schema. Validation is synthetic/replay-only.
 
-## Phase 2 — RB Robot Control Lab (`PLANNED`)
+## Phase 2 — RB Robot Control Lab (`NEXT`)
 
 Review supported controller and official `rbpodo` versions; safe connection and
 state acquisition; capability mapping; mock/replay logs; joint/linear commands;
@@ -43,8 +44,9 @@ repeatable laptop CPU versus Pi CPU comparison.
 
 ## Phase 7 — GPU robotics (`BLOCKED-EXTERNAL`)
 
-PyTorch, CUDA profiling, ONNX, TensorRT, and Isaac ROS. Current workstation has
-no functioning NVIDIA driver/CUDA toolchain, so preserve CPU baselines first.
+PyTorch, CUDA profiling, ONNX, TensorRT, and Isaac ROS. An RTX 5060 Laptop GPU
+and driver 580 are kernel-visible, but the Codex environment hides native device
+nodes. Complete the documented host `nvidia-smi` gate before GPU benchmarks.
 
 ## Phase 8 — Simulation and digital twin (`PLANNED`)
 
