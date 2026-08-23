@@ -46,6 +46,8 @@ rewrite the KAI repository.
 Tracked `datasets/` and `models/` content is documentation only. Raw/processed
 data, trained/pretrained weights, ROS bags, point clouds, captures, and videos
 remain ignored. Introduce DVC or Git LFS only after a real reviewed need exists.
+The cross-workstation transfer gate and company-data rules are defined in
+`docs/data/DATA_POLICY.md` and `docs/data/COMPANY_DATA_BOUNDARY.md`.
 
 ## Incident response
 

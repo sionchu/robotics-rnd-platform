@@ -77,6 +77,8 @@ def _read_text(path: Path) -> str | None:
 def nvidia_hardware(
     proc_gpu_root: Path = Path("/proc/driver/nvidia/gpus"),
     pci_root: Path = Path("/sys/bus/pci/devices"),
+    *,
+    driver_override: str | None = None,
 ) -> dict[str, Any]:
     """Report NVIDIA display devices without exposing UUIDs or serial-like values."""
 
@@ -92,7 +94,7 @@ def nvidia_hardware(
             bus = fields.get("Bus Location", information.parent.name)
             sys_device = pci_root / bus
             driver_link = sys_device / "driver"
-            driver = driver_link.resolve().name if driver_link.exists() else "unbound"
+            driver = driver_override or (driver_link.resolve().name if driver_link.exists() else "unbound")
             devices.append(
                 {
                     "model": fields.get("Model", "NVIDIA GPU"),
@@ -108,7 +110,7 @@ def nvidia_hardware(
             if vendor != "0x10de" or not (device_class or "").startswith("0x03"):
                 continue
             driver_link = device / "driver"
-            driver = driver_link.resolve().name if driver_link.exists() else "unbound"
+            driver = driver_override or (driver_link.resolve().name if driver_link.exists() else "unbound")
             devices.append(
                 {
                     "model": "NVIDIA GPU",

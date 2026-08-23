@@ -24,6 +24,8 @@ or operational data, and does not claim live robot or camera validation.
 - synthetic/replay images, compact generated fixtures, and five complete research experiments;
 - portable CPU/GPU/edge benchmark-result schema with no fabricated GPU results;
 - Python quality gates, architecture-boundary tests, and independent C++17 CMake/CTest baseline;
+- separate Ubuntu, Windows native, and WSL2 diagnostics/bootstrap paths with one Git history;
+- bounded Windows/WSL PyTorch CUDA smoke reporting and an optional OpenUSD 26.8 experiment;
 - experiment template, learning roadmap, hardware notes, and curated official resources.
 
 ## Quick start
@@ -63,6 +65,19 @@ ctest --test-dir cpp/build --output-on-failure
 
 None of these commands require hardware, ROS 2, CUDA, or a vendor SDK. The
 vision commands are explicitly synthetic/replay validation.
+
+Windows uses the independent clone at `C:/dev/robotics-rnd-platform`. Preview
+its conservative setup and run the read-only doctor with:
+
+```powershell
+pwsh -File scripts/windows/bootstrap_windows.ps1 -Mode Preview
+pwsh -File scripts/windows/doctor_windows.ps1
+```
+
+WSL2 keeps its clone under `~/robotics/robotics-rnd-platform`. Use
+`scripts/wsl/bootstrap_wsl.sh --user-only` when Python 3.12, Git, CMake, and G++
+already exist and apt/sudo installation is not desired. See
+`docs/workstations/OVERVIEW.md`.
 
 ## Start a research experiment
 

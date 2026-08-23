@@ -92,3 +92,21 @@ KAI Robotics Vision remains an external repository/snapshot. This repository has
 no reverse dependency on it, no imported history, and no copied implementation
 or operational assets. A future organizational consumer should use a reviewed,
 versioned release of the generic platform rather than source-tree coupling.
+
+## Workstation and data boundaries
+
+The Ubuntu laptop is the real-robotics/ROS 2 lab. Windows native is the GPU,
+OpenUSD, Digital Twin, and Windows SDK lab. Windows WSL2 provides a separate
+Linux build and GPU-support environment, not a shared checkout or default field
+hardware path. All clones integrate through `origin/main` and short-lived task
+branches.
+
+Digital Twin and OpenUSD code belongs under experiments, applications,
+`digital_twin`, or optional integrations. Isaac and `pxr` imports are forbidden
+from core. Physical-to-digital state mappings require concrete units, frames,
+timing, ownership, failure behavior, and tests before promotion.
+
+Git stores code and manifests. Large datasets, model weights, recordings, CAD,
+USD assets, caches, and generated benchmarks remain in governed external data
+roots. Company and production data never crosses into personal storage or this
+repository.

@@ -4,31 +4,29 @@ from scripts.doctor import nvidia_driver_status, nvidia_hardware
 
 
 def write_gpu_fixture(root: Path) -> tuple[Path, Path]:
-    proc_root = root / "proc" / "0000:04:00.0"
+    fixture_bus = "0000-04-00.0"
+    proc_root = root / "proc" / fixture_bus
     proc_root.mkdir(parents=True)
     (proc_root / "information").write_text(
-        "Model: NVIDIA Test GPU\nGPU UUID: GPU-private-value-must-not-leak\nBus Location: 0000:04:00.0\n",
+        f"Model: NVIDIA Test GPU\nGPU UUID: GPU-private-value-must-not-leak\nBus Location: {fixture_bus}\n",
         encoding="utf-8",
     )
     pci_root = root / "pci"
-    device = pci_root / "0000:04:00.0"
+    device = pci_root / fixture_bus
     (device / "power").mkdir(parents=True)
     (device / "power" / "runtime_status").write_text("active\n", encoding="utf-8")
-    driver = root / "drivers" / "nvidia"
-    driver.mkdir(parents=True)
-    (device / "driver").symlink_to(driver, target_is_directory=True)
     return proc_root.parent, pci_root
 
 
 def test_nvidia_hardware_reports_safe_evidence_without_uuid(tmp_path: Path) -> None:
     proc_root, pci_root = write_gpu_fixture(tmp_path)
-    result = nvidia_hardware(proc_root, pci_root)
+    result = nvidia_hardware(proc_root, pci_root, driver_override="nvidia")
 
     assert result["status"] == "detected"
     assert result["devices"] == [
         {
             "model": "NVIDIA Test GPU",
-            "pci_address": "0000:04:00.0",
+            "pci_address": "0000-04-00.0",
             "kernel_driver": "nvidia",
             "runtime_power": "active",
         }
@@ -39,7 +37,7 @@ def test_nvidia_hardware_reports_safe_evidence_without_uuid(tmp_path: Path) -> N
 
 def test_driver_usable_requires_binding_and_character_devices(tmp_path: Path) -> None:
     proc_root, pci_root = write_gpu_fixture(tmp_path)
-    hardware = nvidia_hardware(proc_root, pci_root)
+    hardware = nvidia_hardware(proc_root, pci_root, driver_override="nvidia")
     dev_root = tmp_path / "dev"
     dev_root.mkdir()
 

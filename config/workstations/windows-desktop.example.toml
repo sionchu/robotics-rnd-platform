@@ -1,0 +1,17 @@
+profile_name = "windows-desktop"
+role = "gpu-digital-twin"
+
+[data]
+root = "D:/robotics-data"
+
+[models]
+root = "D:/robotics-data/models"
+
+[usd]
+root = "D:/robotics-data/usd"
+
+[capabilities]
+cuda = true
+isaac_sim = "capability-gated"
+real_robot = false
+ros2 = "optional"

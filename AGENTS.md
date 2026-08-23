@@ -49,6 +49,20 @@ data, run relevant tests, and run `git diff --check`. Never use destructive Git
 commands against existing work. Keep generated data, models, captures, build
 outputs, and vendor files untracked.
 
+## Workstation and Git policy
+
+- `origin/main` is the integrated source of truth; use short-lived task branches.
+- Ubuntu laptop, Windows native, and Windows WSL2 use separate clones, virtual
+  environments, build directories, and caches.
+- Start by fetching, fast-forwarding `main`, and creating one task branch. Never
+  force-push or choose one side wholesale in source-of-truth document conflicts.
+- Git carries code, small configuration, and manifests. Data/model/capture/large
+  asset bytes follow `docs/data/DATA_POLICY.md` outside Git.
+- Ubuntu remains the primary real-hardware lab. Windows/WSL GPU, simulation, or
+  replay results do not authorize robot motion or vendor-hardware operation.
+- Isaac, OpenUSD, CUDA, PyTorch, ROS, and vendor SDKs remain optional adapters or
+  experiment dependencies and never enter `robotics_rnd.core`.
+
 ## Research promotion gate
 
 Code moves from `experiments/` into `src/` only when the hypothesis, environment,

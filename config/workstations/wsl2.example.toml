@@ -1,0 +1,17 @@
+profile_name = "wsl2-desktop"
+role = "linux-build-and-gpu-support"
+
+[data]
+root = "~/robotics-data"
+
+[models]
+root = "~/robotics-data/models"
+
+[usd]
+root = "~/robotics-data/usd"
+
+[capabilities]
+cuda = "detect"
+isaac_sim = "not-primary"
+real_robot = false
+ros2 = "build-offline"

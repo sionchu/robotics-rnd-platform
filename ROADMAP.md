@@ -42,16 +42,19 @@ use cases. Core remains importable without ROS.
 Raspberry Pi 4 camera acquisition, profiling, remote deployment/debugging, and a
 repeatable laptop CPU versus Pi CPU comparison.
 
-## Phase 7 — GPU robotics (`BLOCKED-EXTERNAL`)
+## Phase 7 — GPU robotics (`PLANNED`)
 
-PyTorch, CUDA profiling, ONNX, TensorRT, and Isaac ROS. An RTX 5060 Laptop GPU
-and driver 580 are kernel-visible, but the Codex environment hides native device
-nodes. Complete the documented host `nvidia-smi` gate before GPU benchmarks.
+Windows native and WSL2 have a bounded RTX 4070 Ti PyTorch CUDA smoke baseline.
+On the Ubuntu laptop, the RTX 5060 and driver 580 are kernel-visible but the
+Codex environment hides native device nodes; complete the documented host
+`nvidia-smi` gate there. Continue with reproducible cross-machine CPU/GPU
+comparisons, profiling, ONNX, and TensorRT only from measured workloads.
 
 ## Phase 8 — Simulation and digital twin (`PLANNED`)
 
-Gazebo, OpenUSD, Isaac Sim only when hardware supports it, robot/camera
-simulation, replay, and sanitized synthetic datasets.
+The vendor-neutral OpenUSD stage baseline and asset/data policy are established.
+Next, add a small generic robot/camera stage validation and replay mapping.
+Isaac Sim remains optional and limited by the 4070 Ti 12 GB capability gate.
 
 ## Phase 9 — Manipulation and autonomy (`PLANNED`)
 

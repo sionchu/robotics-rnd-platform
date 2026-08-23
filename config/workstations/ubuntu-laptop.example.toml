@@ -1,0 +1,17 @@
+profile_name = "ubuntu-laptop"
+role = "real-world-robotics"
+
+[data]
+root = "~/robotics-data"
+
+[models]
+root = "~/robotics-data/models"
+
+[usd]
+root = "~/robotics-data/usd"
+
+[capabilities]
+cuda = "detect"
+isaac_sim = "optional"
+real_robot = true
+ros2 = "primary"

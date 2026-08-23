@@ -20,6 +20,7 @@ dev = [
   "ruff>=0.6",
 ]
 vision = ["opencv-python-headless>=4.10,<5"]
+openusd = ["usd-core>=26.8,<27"]
 ros = []
 nvidia = []
 
@@ -34,8 +35,13 @@ where = ["src"]
 addopts = "-ra --strict-markers"
 testpaths = ["tests"]
 markers = [
+  "unit: hardware-free unit tests",
+  "integration: hardware-free integration tests",
   "hardware: requires explicitly authorized physical hardware",
+  "gpu: requires an explicitly requested GPU validation environment",
+  "simulation: requires an explicitly requested simulation environment",
   "vendor: requires a separately installed vendor SDK",
+  "slow: intentionally long-running validation",
 ]
 
 [tool.ruff]

@@ -1,0 +1,12 @@
+id: apriltag-calibration-demo-v1
+type: image-dataset
+origin: personal-lab
+license: private-personal-research
+contains_company_data: false
+portable_to_personal_machine: true
+format_version: 1
+coordinate_convention: camera optical frame, meters
+storage:
+  ubuntu: ${ROBOTICS_DATA_ROOT}/datasets/apriltag-calibration-demo-v1
+  windows: ${ROBOTICS_DATA_ROOT}/datasets/apriltag-calibration-demo-v1
+sha256_manifest: manifests/apriltag-calibration-demo-v1.sha256

@@ -5,16 +5,24 @@ from pathlib import Path
 
 FORBIDDEN_ROOTS = {
     "cv2",
-    "rbpodo",
-    "mecheye",
-    "rclpy",
-    "rospy",
     "RPi",
     "Jetson",
+    "carb",
     "cuda",
-    "pycuda",
     "isaac_ros",
+    "isaacsim",
+    "mecheye",
+    "omni",
+    "pxr",
+    "pycuda",
+    "pythoncom",
+    "rbpodo",
+    "rclpy",
+    "rospy",
     "torch",
+    "win32api",
+    "win32con",
+    "zivid",
 }
 
 

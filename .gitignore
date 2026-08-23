@@ -1,5 +1,6 @@
 # Python
 .venv/
+venv/
 __pycache__/
 *.py[cod]
 *.egg-info/
@@ -8,10 +9,17 @@ __pycache__/
 .ruff_cache/
 build/
 dist/
+out/
+generated/
+cache/
+cmake-build-*/
+.ninja_deps
+.ninja_log
 
 # Editors and local configuration
 .idea/
 .vscode/
+.vscode/settings.local.json
 .env
 .env.*
 !.env.example
@@ -19,12 +27,20 @@ dist/
 *.key
 credentials*
 secrets*
+config/workstations/local.toml
+reports/local/
 
 # C++
 cpp/build/
 CMakeFiles/
 CMakeCache.txt
 compile_commands.json
+*.pdb
+*.obj
+*.dll
+*.so
+*.a
+*.lib
 
 # Data, models, captures, bags, and media
 datasets/raw/**
@@ -45,6 +61,23 @@ models/trained/**
 *.avi
 *.mp4
 *.mov
+*.zdf
+*.usd
+*.usdc
+*.usdz
+
+# Local data and Digital Twin/AI caches
+data/local/
+data/cache/
+assets/local/
+assets/cache/
+.cache/
+.nv/
+ov/cache/
+omniverse-cache/
+isaac-sim-cache/
+usd-cache/
+cuda-cache/
 
 # Vendor packages and archives
 vendor/
