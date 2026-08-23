@@ -1,0 +1,52 @@
+$schema: urn:robotics-rnd:workcell-exchange:1.0.0
+schema_version: 1.0.0
+workcell_id: generic_minimal_workcell
+conventions:
+  length_unit: metre
+  angle_unit: radian
+  quaternion_order: xyzw
+  transform_convention: T_target_source
+  handedness: right-handed
+  up_axis: Z
+frames:
+  - {id: world, role: world, parent: null}
+  - {id: robot_base, role: robot_base, parent: world}
+  - {id: tool, role: tool, parent: robot_base}
+  - {id: camera, role: camera, parent: world}
+  - {id: fixture, role: fixture, parent: world}
+  - {id: target, role: target, parent: fixture}
+transforms:
+  - name: T_world_robot_base
+    target_frame: world
+    source_frame: robot_base
+    translation_m: [0.0, 0.0, 0.0]
+    rotation_xyzw: [0.0, 0.0, 0.0, 1.0]
+  - name: T_robot_base_tool
+    target_frame: robot_base
+    source_frame: tool
+    translation_m: [0.0, 0.0, 0.45]
+    rotation_xyzw: [0.0, 0.7071067811865475, 0.0, 0.7071067811865476]
+  - name: T_world_camera
+    target_frame: world
+    source_frame: camera
+    translation_m: [1.0, -1.0, 1.2]
+    rotation_xyzw: [0.0, 0.0, 0.3826834323650898, 0.9238795325112867]
+  - name: T_world_fixture
+    target_frame: world
+    source_frame: fixture
+    translation_m: [0.8, 0.0, 0.0]
+    rotation_xyzw: [0.0, 0.0, 0.0, 1.0]
+  - name: T_fixture_target
+    target_frame: fixture
+    source_frame: target
+    translation_m: [0.0, 0.0, 0.1]
+    rotation_xyzw: [0.0, 0.0, 0.0, 1.0]
+usd:
+  default_prim: /World
+  prims:
+    - {path: /World, type: Xform, frame: world}
+    - {path: /Robot, type: Xform, frame: robot_base}
+    - {path: /Robot/Tool, type: Xform, frame: tool}
+    - {path: /Camera, type: Camera, frame: camera}
+    - {path: /Fixture, type: Xform, frame: fixture}
+    - {path: /Target, type: Xform, frame: target}

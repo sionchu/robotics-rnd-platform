@@ -34,6 +34,9 @@ Drivers and integrations (ROS 2, TCP, GUI, vendor SDKs)
    configuration, and logging.
 7. Tests must be able to validate the generic platform without hardware, ROS,
    CUDA, or vendor SDKs.
+8. `robotics_rnd.exchange` may depend on the core geometry contract and optional
+   schema/serialization libraries, but it must not import OpenUSD, simulators,
+   GPU runtimes, ROS, or vendor SDKs.
 
 Architecture tests scan core imports for `rclpy`, `rbpodo`, Mech-Eye modules,
 Raspberry Pi modules, OpenCV, and CUDA/Isaac dependencies.
@@ -105,6 +108,12 @@ Digital Twin and OpenUSD code belongs under experiments, applications,
 `digital_twin`, or optional integrations. Isaac and `pxr` imports are forbidden
 from core. Physical-to-digital state mappings require concrete units, frames,
 timing, ownership, failure behavior, and tests before promotion.
+
+The Workcell Exchange Schema is the portable boundary between core transforms
+and external digital-twin tools. It fixes metres, radians, normalized XYZW
+quaternions, required frame roles, and `T_target_source` direction. OpenUSD
+generation consumes this validated contract but remains outside core. See
+`docs/architecture/WORKCELL_EXCHANGE_SCHEMA.md`.
 
 Git stores code and manifests. Large datasets, model weights, recordings, CAD,
 USD assets, caches, and generated benchmarks remain in governed external data

@@ -21,6 +21,7 @@ dev = [
 ]
 vision = ["opencv-python-headless>=4.10,<5"]
 openusd = ["usd-core>=26.8,<27"]
+workcell = ["jsonschema>=4.23,<5", "PyYAML>=6.0,<7"]
 ros = []
 nvidia = []
 

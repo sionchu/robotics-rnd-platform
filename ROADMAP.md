@@ -52,9 +52,10 @@ comparisons, profiling, ONNX, and TensorRT only from measured workloads.
 
 ## Phase 8 — Simulation and digital twin (`PLANNED`)
 
-The vendor-neutral OpenUSD stage baseline and asset/data policy are established.
-Next, add a small generic robot/camera stage validation and replay mapping.
-Isaac Sim remains optional and limited by the 4070 Ti 12 GB capability gate.
+The versioned Workcell Exchange Schema, JSON/YAML round trip, core transform
+validation, manifest-driven OpenUSD workcell, and asset/data policy are
+established. Next, add a replay mapping in a separate research cycle. Isaac Sim
+remains optional and limited by the 4070 Ti 12 GB capability gate.
 
 ## Phase 9 — Manipulation and autonomy (`PLANNED`)
 

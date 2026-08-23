@@ -26,6 +26,8 @@ or operational data, and does not claim live robot or camera validation.
 - Python quality gates, architecture-boundary tests, and independent C++17 CMake/CTest baseline;
 - separate Ubuntu, Windows native, and WSL2 diagnostics/bootstrap paths with one Git history;
 - bounded Windows/WSL PyTorch CUDA smoke reporting and an optional OpenUSD 26.8 experiment;
+- versioned JSON/YAML Workcell Exchange manifests with core-validated frame graphs;
+- manifest-driven metric OpenUSD workcells with `/World`, `/Robot`, `/Camera`, `/Fixture`, and `/Target`;
 - experiment template, learning roadmap, hardware notes, and curated official resources.
 
 ## Quick start
@@ -42,7 +44,7 @@ system changes:
 ```bash
 python3.12 -m venv .venv
 source .venv/bin/activate
-python -m pip install -e ".[dev,vision]"
+python -m pip install -e ".[dev,vision,workcell]"
 ```
 
 Run the generic gates and examples:
@@ -65,6 +67,14 @@ ctest --test-dir cpp/build --output-on-failure
 
 None of these commands require hardware, ROS 2, CUDA, or a vendor SDK. The
 vision commands are explicitly synthetic/replay validation.
+
+For the optional schema-to-OpenUSD path, install the two explicit extras and
+generate an ignored local artifact:
+
+```bash
+python -m pip install -e ".[workcell,openusd]"
+python experiments/openusd/create_stage.py --manifest config/workcells/minimal-workcell.yaml
+```
 
 Windows uses the independent clone at `C:/dev/robotics-rnd-platform`. Preview
 its conservative setup and run the read-only doctor with:
@@ -92,6 +102,7 @@ results, and conclusion before promoting code. See `RESEARCH_WORKFLOW.md`.
 
 - `src/robotics_rnd/core`: stable units, frames, geometry, config, diagnostics, and state.
 - `src/robotics_rnd/robot`, `vision`: platform-owned interfaces and data models.
+- `src/robotics_rnd/exchange`, `schemas`: validated vendor-neutral interchange contracts.
 - `src/robotics_rnd/skills`: reusable behavior composed from interfaces.
 - `src/robotics_rnd/drivers`: mocks, replay, and optional vendor adapters.
 - `applications`: runnable composition roots and future labs.
@@ -100,6 +111,6 @@ results, and conclusion before promoting code. See `RESEARCH_WORKFLOW.md`.
 - `tests`: unit, integration, and enforceable architecture constraints.
 
 Read `ARCHITECTURE.md`, `SECURITY_AND_IP.md`, and `AGENTS.md` before extending
-the platform. The next recommended milestone is live-camera validation using a
-generic image-source adapter and a physically printed target; robot motion
-remains out of scope until perception uncertainty is measured on real optics.
+the platform. The Workcell Exchange format is documented in
+`docs/architecture/WORKCELL_EXCHANGE_SCHEMA.md`. Live-camera and robot-motion
+work remains outside this manifest-only interoperability checkpoint.

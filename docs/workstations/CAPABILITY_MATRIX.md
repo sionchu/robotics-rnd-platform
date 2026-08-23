@@ -16,7 +16,7 @@ benchmark scripts after driver, package, or hardware changes.
 | CUDA | driver issue at baseline | primary, driver visible | GPU telemetry visible |
 | PyTorch | optional | 2.12.1+cu130 smoke passed | 2.12.1+cu130 smoke passed |
 | TensorRT | optional | optional Windows/WSL | optional |
-| OpenUSD | learning/support | `usd-core` 26.8 stage creation passed | support; extra not installed |
+| OpenUSD | learning/support | `usd-core` 26.8 manifest-driven stage passed | `usd-core` 26.8 manifest-driven stage passed |
 | Blender | optional | absent at inspection | not primary |
 | Isaac Sim | optional/limited | installed, below official minimum GPU/VRAM | not primary |
 | Digital Twin | secondary | primary | support |
