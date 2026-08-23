@@ -1,0 +1,4 @@
+schema: robotics-rnd-dataset-registry-v1
+last_verified: "2026-08-23"
+entries: []
+note: v0.3 uses deterministic generated mock/journal evidence and no external or physical robot dataset.

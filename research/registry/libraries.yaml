@@ -1,0 +1,30 @@
+schema: robotics-rnd-library-registry-v1
+last_verified: "2026-08-23"
+entries:
+  - id: rbpodo
+    version_reviewed: 0.16.14
+    installed_by_default: false
+    official_source: https://github.com/RainbowRobotics/rbpodo
+    license: Apache-2.0
+    decision: WRAP_WITH_ADAPTER
+    boundary: robotics_rnd.drivers.rainbow
+    compatibility: Feature detection plus adapter contract tests; no platform-wide dependency.
+    experiments: [013_rb_pose_mapping, 014_rbpodo_command_semantics, 015_rb_fault_reconnect, 016_rb_io_contract]
+  - id: opencv-python-headless
+    version_reviewed: 4.14.0
+    installed_by_default: false
+    official_source: https://github.com/opencv/opencv
+    license: Apache-2.0
+    decision: USE_AS_DEPENDENCY
+    boundary: robotics_rnd.vision optional extra
+    compatibility: Existing bounded major-version range >=4.10,<5.
+    experiments: [001_camera_calibration, 002_apriltag_detection, 003_apriltag_pnp_pose]
+  - id: ros2-jazzy
+    version_reviewed: 0.11.0-1noble.20251108.003726
+    installed_by_default: false
+    official_source: https://docs.ros.org/en/jazzy/
+    license: multiple-open-source-packages
+    decision: REFERENCE_ONLY
+    boundary: robotics_rnd.integrations.ros2
+    compatibility: Optional host installation; generic CI and package imports do not require ROS.
+    experiments: []

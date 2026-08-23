@@ -4,6 +4,11 @@
 LEARN -> EXPERIMENT -> BENCHMARK / VERIFY -> PACKAGE -> APPLICATION
 ```
 
+External repositories, libraries, papers, algorithms, vendor documentation, and
+standards first follow `docs/research/EXTERNAL_RESEARCH_INTAKE.md` and the
+`research/registry/` records. Every evaluation ends in one explicit technology
+decision and records exact revision/license/provenance before code integration.
+
 ## 1. Learn
 
 Record the theory, units, frames, assumptions, official sources, and a small
@@ -34,7 +39,9 @@ need replay or synthetic verification where practical.
 
 Applications choose adapters and configuration at the composition root. They do
 not push vendor, ROS, GUI, or process-specific types back into core. Record real
-hardware validation separately from mock, replay, and simulation results.
+hardware validation separately from mock, replay, and simulation results. Use
+`SOURCE_VERIFIED`, `MOCK_VERIFIED`, and `LIVE_VERIFIED` precisely; software
+timing never predicts controller timing.
 
 When hardware is unavailable, prepare schemas, adapters, replay, tests, and an
 exact handoff, but keep measurements null and use

@@ -50,12 +50,17 @@ models/trained/**
 # Vendor packages and archives
 vendor/
 vendor_sdk/
+.external/
 *.deb
 *.rpm
 *.tar
 *.tar.gz
 *.tgz
 *.zip
+
+# Local robot sessions and hardware configuration
+robot_sessions/local/**
+applications/rb_control_lab/config/local/**
 
 # Experiment outputs (documentation stays tracked)
 experiments/**/results/*

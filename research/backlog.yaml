@@ -1,0 +1,24 @@
+schema: robotics-rnd-research-backlog-v1
+last_updated: "2026-08-23"
+items:
+  - priority: next
+    technology: Mech-Eye SDK and Mech-Vision Standard Interface
+    question: Which acquisition and external-result contracts can be verified without vendor leakage?
+  - priority: high
+    technology: Open3D and PCL
+    question: Which point-cloud representation and filter boundary best preserves provenance and units?
+  - priority: high
+    technology: ICP, GICP, and TEASER++
+    question: Which registration methods meet measured robustness/runtime requirements on one shared dataset?
+  - priority: high
+    technology: hand-eye calibration
+    question: Which independently reproducible solvers and observability checks fit the platform frame convention?
+  - priority: medium
+    technology: MoveIt 2 and ros2_control
+    question: When does an optional ROS bridge add value beyond RobotApplicationService?
+  - priority: medium
+    technology: Isaac ROS, TensorRT, and OpenUSD
+    question: Which measured workload justifies the GPU dependency and deployment cost?
+  - priority: future
+    technology: VLA and imitation-learning frameworks
+    question: What evaluation, licensing, dataset, and safety gates are required before manipulation research?

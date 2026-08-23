@@ -18,6 +18,11 @@ licenses, documentation, screenshots, and metadata.
   rights;
 - files or Git history copied from KAI Robotics Vision.
 
+Robot journals are local evidence, not automatically safe artifacts. The
+platform redacts address/token/serial-like keys, but free-form vendor/controller
+messages still require human review. Keep raw sessions under ignored local
+storage and commit only purpose-built sanitized fixtures.
+
 When portability or ownership is ambiguous, leave the item out and classify it
 `DO-NOT-MIGRATE` in the private migration inventory.
 
@@ -26,6 +31,8 @@ When portability or ownership is ambiguous, leave the item out and classify it
 Vendor SDKs are optional adapters. Generic packages do not import `rbpodo`,
 Mech-Eye/Mech-Vision SDKs, ROS 2, Raspberry Pi libraries, CUDA APIs, Isaac ROS,
 or camera-vendor modules. Adapters expose only platform-owned models.
+External inspection clones live under ignored `.external/` or `/tmp`; intake
+never authorizes executing third-party scripts or copying source.
 
 ## Before every commit
 

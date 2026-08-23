@@ -1,0 +1,87 @@
+schema: robotics-rnd-repository-registry-v1
+last_verified: "2026-08-23"
+entries:
+  - id: rbpodo
+    name: rbpodo
+    provider: Rainbow Robotics
+    type: robot-client-library
+    source:
+      repository: https://github.com/RainbowRobotics/rbpodo
+      official: true
+    default_branch: main
+    version_reviewed: 0.16.14
+    commit_reviewed: f6ef41adf629dd27c96b0d3e7ebf3d3fc0cc53c4
+    release_date: "2026-07-23"
+    license:
+      spdx: Apache-2.0
+      verified_from: LICENSE
+    languages: [C++, Python]
+    maintenance:
+      status: active
+      last_commit_reviewed: "2026-07-23"
+      open_issues_observed: 7
+      open_pull_requests_observed: 2
+    api_stability:
+      status: evolving
+      evidence: README warns that the API is under development and subject to change.
+    platform_use:
+      decision: WRAP_WITH_ADAPTER
+      adapter: RainbowRobotDriver
+    evidence:
+      - https://github.com/RainbowRobotics/rbpodo/tree/f6ef41adf629dd27c96b0d3e7ebf3d3fc0cc53c4
+      - https://github.com/RainbowRobotics/rbpodo/releases/tag/v0.16.14
+      - https://pypi.org/project/rbpodo/0.16.14/
+  - id: rbpodo_ros2
+    name: rbpodo_ros2
+    provider: Rainbow Robotics
+    type: ros2-control-integration
+    source:
+      repository: https://github.com/RainbowRobotics/rbpodo_ros2
+      official: true
+    default_branch: main
+    version_reviewed: unreleased-main
+    commit_reviewed: 5e8294a985e7ce5e20e70564c2681130afc5f502
+    release_date: null
+    license:
+      spdx: NOASSERTION
+      verified_from: Root license is absent; package manifests declare Apache-2.0 except MoveIt config BSD-3-Clause.
+    languages: [C++, Python, CMake]
+    maintenance:
+      status: active
+      last_commit_reviewed: "2026-06-23"
+      open_issues_observed: 2
+      open_pull_requests_observed: 1
+    api_stability:
+      status: experimental
+      evidence: README says active development and not for production.
+    platform_use:
+      decision: REFERENCE_ONLY
+      adapter: optional-future-ros2-bridge
+    evidence:
+      - https://github.com/RainbowRobotics/rbpodo_ros2/tree/5e8294a985e7ce5e20e70564c2681130afc5f502
+  - id: rb_cobot_docs
+    name: RB Cobot Documentation
+    provider: Rainbow Robotics
+    type: vendor-documentation
+    source:
+      repository: https://github.com/RainbowRobotics/rb_cobot_docs
+      official: true
+    default_branch: main
+    version_reviewed: online-current-2026-08-23
+    commit_reviewed: bf23897e32e2
+    release_date: null
+    license:
+      spdx: NOASSERTION
+      verified_from: No repository license detected; used as reference only.
+    languages: [Markdown, VuePress]
+    maintenance:
+      status: active
+      last_commit_reviewed: "2026-07-09"
+    api_stability:
+      status: versioned-documents
+      evidence: UI Script and reqdata pages identify v6.10 while other pages carry separate document versions.
+    platform_use:
+      decision: REFERENCE_ONLY
+      adapter: RainbowRobotDriver
+    evidence:
+      - https://rainbowrobotics.github.io/rb_cobot_docs/

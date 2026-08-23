@@ -1,0 +1,20 @@
+schema: robotics-rnd-algorithm-registry-v1
+last_verified: "2026-08-23"
+entries:
+  - id: rb-zyx-pose-mapping
+    name: Rainbow six-vector to platform pose mapping
+    category: coordinate-conversion
+    problem: Convert millimetre/Euler-ZYX vendor poses to metre/XYZW platform poses and back.
+    assumptions:
+      - Vendor vector order is x, y, z, rx, ry, rz.
+      - Vendor orientation is Euler ZYX while vector components remain xyz ordered.
+    inputs: six finite vendor values or one framed platform Pose
+    outputs: framed Pose or six finite vendor values
+    complexity: O(1)
+    real_time_suitability: yes
+    failure_modes: [gimbal-nonuniqueness, wrong-frame, wrong-units, non-finite-input]
+    candidate_implementations: [independent-platform-mapping]
+    license: platform-owned-independent-implementation
+    benchmark_status: deterministic-round-trip-tested
+    decision: REIMPLEMENT_GENERIC
+    experiment: 013_rb_pose_mapping

@@ -1,0 +1,16 @@
+schema: robotics-rnd-vendor-registry-v1
+last_verified: "2026-08-23"
+entries:
+  - id: rainbow-robotics-rb
+    vendor: Rainbow Robotics
+    product_scope: RB-series collaborative robots only
+    official_documentation: https://rainbowrobotics.github.io/rb_cobot_docs/
+    official_repositories:
+      - https://github.com/RainbowRobotics/rbpodo
+      - https://github.com/RainbowRobotics/rbpodo_ros2
+      - https://github.com/RainbowRobotics/rb_cobot_docs
+    decision: WRAP_WITH_ADAPTER
+    restrictions:
+      - No addresses, serials, controller configuration, or production data in Git.
+      - No live motion in v0.3.
+      - First future physical gate is read-only LEVEL 1.
