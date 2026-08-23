@@ -16,6 +16,9 @@ Machine role: Windows RTX desktop with a WSL2 companion environment
 - PyTorch CUDA smoke benchmarking on the Windows RTX desktop and its WSL2
   environment.
 - Vendor-neutral OpenUSD stage generation with explicit metric and axis metadata.
+- Workcell Exchange Schema 1.0 with equivalent JSON/YAML manifests, required
+  frame roles, normalized XYZW transforms, core-backed graph validation, and a
+  manifest-driven OpenUSD workcell.
 - Data, model, asset, recording, and company-IP separation rules that keep large
   or restricted material outside Git.
 
@@ -27,8 +30,8 @@ Machine role: Windows RTX desktop with a WSL2 companion environment
 
 ## Latest validated commit
 
-- `e387074` — dual-workstation, GPU, OpenUSD, CI, and documentation
-  implementation baseline rebased onto the Ubuntu v0.2 vision foundation.
+- `2506f3b` — Workcell Exchange Schema, JSON/YAML manifests, core transform
+  validation, OpenUSD generation, tests, CI, and consumer/producer documentation.
 - The final documentation/executable-mode checkpoint is the current `HEAD` on
   `win/bootstrap-desktop`.
 
@@ -45,23 +48,25 @@ Machine role: Windows RTX desktop with a WSL2 companion environment
 
 - Windows 11, Python 3.12.10 repository environment, MSVC 19.44, CMake 4.1.1,
   Ninja 1.13.2, and Git 2.48.1.
-- Python: 49 tests passed; Ruff, Ruff formatting, Mypy, and pre-commit passed.
+- Python: 56 tests passed; Ruff, Ruff formatting, Mypy, and pre-commit passed.
 - Native C++: Visual Studio generator build passed; CTest 1/1 passed.
 - Vision research: all five synthetic acceptance groups passed.
 - PyTorch 2.12.1 with CUDA 13.0 successfully executed the RTX 4070 Ti smoke
   workload at compute capability 8.9.
-- OpenUSD 26.8 generated and reopened a metric Z-up stage.
+- OpenUSD 26.8 generated and reopened the manifest-driven metric Z-up workcell
+  from both JSON and YAML.
 
 ## WSL validation status
 
 - Ubuntu 24.04.3 under WSL2 with Python 3.12.3, GCC/G++ 13.3, CMake 3.28.3,
   Ninja 1.13.0, and Git 2.43.0.
-- Python: 49 tests passed; Ruff, Ruff formatting, Mypy, and pre-commit passed.
+- Python: 56 tests passed; Ruff, Ruff formatting, Mypy, and pre-commit passed.
 - Native C++: Ninja/GNU build passed; CTest 1/1 passed.
 - Vision research: all five synthetic acceptance groups passed.
 - PyTorch 2.12.1 with CUDA 13.0 successfully executed the RTX 4070 Ti smoke
   workload at compute capability 8.9.
-- OpenUSD 26.8 generated a metric Z-up stage in the external WSL data root.
+- OpenUSD 26.8 generated and reopened the manifest-driven workcell in the
+  external WSL data root.
 
 ## Known hardware-only tests
 
@@ -74,7 +79,7 @@ Machine role: Windows RTX desktop with a WSL2 companion environment
 
 - Isaac Sim scene launch, RTX rendering, sensor simulation, and sustained VRAM
   behavior.
-- Robot/camera USD articulation, replay mapping, and simulation-to-replay parity.
+- Workcell replay mapping and simulation-to-replay parity.
 
 ## Known blockers
 
@@ -89,7 +94,6 @@ Machine role: Windows RTX desktop with a WSL2 companion environment
 
 ## Next recommended task
 
-Run one cross-machine parity cycle for the existing core and synthetic vision
-fixtures at the same commit on Ubuntu, Windows, and WSL2. Store only compact
-benchmark summaries outside Git, compare accuracy and timing metadata, and use
-the results to define the first vendor-neutral robot/camera USD replay mapping.
+Review and merge `win/bootstrap-desktop`. Then pin the merge commit in the future
+`manufacturing-digital-twin-rnd` repository and implement its first schema
+consumer contract test before adding manufacturing or simulation concepts.

@@ -2,10 +2,9 @@
 
 ## Objective
 
-Extend the canonical Ubuntu-created `robotics-rnd-platform` repository into a
-safe dual-workstation Windows/WSL2 robotics R&D platform without duplicating the
-repository, overwriting newer Ubuntu work, or mixing company/private data into
-Git.
+Finalize the Windows/WSL2 bootstrap branch with a vendor-neutral Workcell
+Exchange Schema and manifest-driven OpenUSD workcell while preserving the
+canonical Ubuntu history and company/private-data boundaries.
 
 ## Scope
 
@@ -16,6 +15,11 @@ Git.
 - Add cross-platform bootstrap, diagnostics, workstation profiles, CI, GPU smoke
   tests, an OpenUSD baseline, data/IP policies, and operator documentation.
 - Validate the portable Python/C++/vision baseline on Windows and WSL2.
+- Define world, robot-base, tool, camera, fixture, and target frames in metres,
+  radians, normalized XYZW quaternions, and `T_target_source` direction.
+- Generate and reopen a minimal OpenUSD workcell from equivalent JSON/YAML
+  manifests without adding manufacturing simulation behavior.
+- Prepare `win/bootstrap-desktop` for review into `main`.
 
 ## Acceptance criteria
 
@@ -27,6 +31,8 @@ Git.
 - Produce a vendor-neutral OpenUSD artifact outside Git.
 - Run relevant local quality gates, commit the work, push only the task branch,
   and leave an evidence-backed continuation point.
+- Validate schema shape, semantic transform graphs, JSON round trip, OpenUSD
+  mapping, and architecture separation on Windows, WSL2, and CI.
 
 ## Completed
 
@@ -42,14 +48,19 @@ Git.
 - Installed only repository-scoped or user-scoped development dependencies.
   No driver, system CUDA Toolkit, Docker, vendor SDK, or security setting was
   changed.
+- Added Workcell Exchange Schema 1.0, equivalent generic JSON/YAML manifests,
+  core-backed transform resolution, and a manifest-driven metric OpenUSD stage.
+- Added schema, semantic, round-trip, OpenUSD reopen, and architecture tests.
+- Documented consumption/production boundaries for the future
+  `manufacturing-digital-twin-rnd` repository.
 
 ## Current checkpoint
 
 - Branch: `win/bootstrap-desktop`
 - Base: `origin/main` at `c01e9a1`
-- Validated implementation baseline: `e387074`
-- The working checkpoint includes documentation and executable-mode corrections
-  for WSL-facing scripts.
+- Validated schema implementation baseline: `2506f3b`
+- Windows and the separate WSL2 Linux-filesystem clone are on the same task
+  branch. The branch is ready for final documentation, CI, and PR review.
 
 ## Decisions and reasons
 
@@ -63,16 +74,24 @@ Git.
   they are runtime artifacts, not source.
 - Retained vendor adapters as placeholders and did not copy vendor/company source
   or private captures into the platform.
+- Kept `robotics_rnd.exchange` separate from core and OpenUSD. The exchange
+  package depends on core transforms plus optional JSON Schema/YAML libraries;
+  only the experiment adapter imports `pxr`.
+- Required a connected parent/child transform tree and used core composition to
+  resolve all `T_target_source` queries instead of defining another math stack.
+- Kept the USD example to empty transform/camera prims, because geometry,
+  physics, processes, and manufacturing simulation belong in a future separate
+  repository.
 
 ## Verification evidence
 
-- Windows Python: 49 passed; Ruff, formatting, Mypy (69 source files), and all
+- Windows Python: 56 passed; Ruff, formatting, Mypy (71 source files), and all
   pre-commit hooks passed.
 - Windows C++: MSVC build passed; CTest 1/1 passed.
 - Windows vision research: five acceptance groups passed.
 - Windows GPU smoke: PyTorch 2.12.1+cu130, CUDA runtime 13.0, RTX 4070 Ti,
   compute capability 8.9, checksum 7.302420616149902, status PASS.
-- WSL2 Python: 49 passed; Ruff, formatting, Mypy (69 source files), and all
+- WSL2 Python: 56 passed; Ruff, formatting, Mypy (71 source files), and all
   pre-commit hooks passed.
 - WSL2 C++: GNU/Ninja build passed; CTest 1/1 passed.
 - WSL2 vision research: five acceptance groups passed.
@@ -80,6 +99,13 @@ Git.
   compute capability 8.9, checksum 7.302420616149902, status PASS.
 - OpenUSD 26.8 created stages with `defaultPrim = World`, `metersPerUnit = 1`,
   and `upAxis = Z` on both Windows and WSL2.
+- Both JSON and YAML manifests generated the required `/World`, `/Robot`,
+  `/Camera`, `/Fixture`, and `/Target` prims; `/Robot/Tool` retains the tool
+  frame. The generated stages reopened successfully.
+- Schema tests reject unit changes, non-normalized XYZW quaternions, disconnected
+  transform edges, and unknown frame queries.
+- GitHub Actions run `32662640913` passed Python and C++ jobs on both
+  `windows-latest` and `ubuntu-latest` for commit `2506f3b`.
 - Isaac Sim 6.0.1 packaged compatibility checker exited successfully; the
   readiness assessment remains limited by 12,282 MiB VRAM.
 
@@ -93,6 +119,8 @@ Git.
   performed.
 - No Ubuntu laptop commands were issued from the Windows task.
 - No merge to `main`, release tag, or force-push was performed.
+- No Blender, Docker, CUDA Toolkit, Isaac feature, geometry asset, physics,
+  process model, or manufacturing simulation code was added.
 
 ## Blockers
 
@@ -101,10 +129,12 @@ Git.
 - Ubuntu laptop GPU operability still requires its documented native-host test.
 - Hardware and vendor integration require authorized devices, SDKs, safety
   review, and appropriately separated data.
+- No blocker remains for opening a PR from `win/bootstrap-desktop` after the
+  final GitHub Actions result is green.
 
 ## Modified files
 
-- Workstation/CI/config: `.github/workflows/ci.yml`, `.gitattributes`,
+- Workstation/CI/config: `.github/workflows/quality.yml`, `.gitattributes`,
   `.gitignore`, `.editorconfig`, `pyproject.toml`, `config/workstations/`.
 - Runtime tools: `scripts/common/`, `scripts/windows/`, `scripts/wsl/`,
   `experiments/gpu/`, `experiments/openusd/`.
@@ -113,10 +143,14 @@ Git.
   updates to root architecture, roadmap, resource, and project documents.
 - Tests: cross-platform workstation configuration and architecture/diagnostic
   boundary updates.
+- Workcell exchange: `schemas/workcell-exchange-v1.schema.json`,
+  `config/workcells/`, `src/robotics_rnd/exchange/`,
+  `experiments/openusd/create_stage.py`, and the new architecture/integration/
+  unit tests.
 
 ## Next concrete action
 
-After review, merge `win/bootstrap-desktop` through the normal GitHub workflow.
-Then check out that exact merge commit on Ubuntu, Windows, and WSL2 and run the
-same core/vision replay benchmark suite to establish a three-environment parity
-record before adding vendor or physical-hardware integration.
+Open a PR from `win/bootstrap-desktop` into `main`, review the schema contract and
+CI matrix, and merge through the normal GitHub workflow. After merge, pin that
+commit in the future `manufacturing-digital-twin-rnd` repository and add its
+first consumer-side contract test before any manufacturing-domain extension.

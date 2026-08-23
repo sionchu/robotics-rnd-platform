@@ -225,3 +225,60 @@
 - Next task: run an identical core/vision replay parity cycle at one commit on
   Ubuntu, Windows, and WSL2, then define the first vendor-neutral robot/camera USD
   replay mapping from those measured results.
+
+## 2026-08-24 — Workcell Exchange Schema finalization
+
+### Contract and architecture
+
+- Added Workcell Exchange Schema 1.0 as a strict draft-2020-12 JSON Schema with
+  a portable URN identifier.
+- Defined required world, robot-base, tool, camera, fixture, and target roles;
+  metres, radians, normalized XYZW quaternions, right-handed Z-up coordinates,
+  and `T_target_source` direction are fixed constants.
+- Added equivalent generic JSON and YAML examples. Every non-world frame has one
+  parent and one `T_parent_child` edge.
+- Added `robotics_rnd.exchange` outside core. It validates IDs, roles, units,
+  quaternion normalization, graph connectivity, transform names/edges, and USD
+  mappings, then delegates composition and inversion to core `Transform`.
+- Added optional `workcell` dependencies for JSON Schema and YAML parsing. Core
+  remains standard-library/NumPy-only and contains no OpenUSD or runtime-adapter
+  import.
+
+### OpenUSD and repository boundary
+
+- Reworked the OpenUSD experiment to consume a validated JSON/YAML manifest and
+  create `/World`, `/Robot`, `/Robot/Tool`, `/Camera`, `/Fixture`, and `/Target`.
+- The stage is metric and Z-up, stores frame/convention metadata, saves, and
+  reopens before success is reported.
+- Documented how the future `manufacturing-digital-twin-rnd` repository will
+  consume and produce the schema while retaining ownership of manufacturing
+  concepts, assets, simulation, and orchestration.
+- No geometry asset, physics, manufacturing process, Blender, Docker, CUDA
+  Toolkit, Isaac feature, vendor SDK, or company/private data was introduced.
+
+### Tests and observed results
+
+- Added JSON Schema, JSON/YAML equivalence, deterministic JSON round-trip,
+  transform-chain, invalid-unit/quaternion/edge, OpenUSD reopen, prim mapping,
+  and architecture-boundary tests.
+- Windows Python: `56 passed in 2.07s`; Ruff passed; 224 files were formatted;
+  Mypy reported no issues in 71 source files; all five vision acceptance groups
+  passed; MSVC build and CTest 1/1 passed.
+- WSL2 Linux-filesystem clone at `2506f3b`: `56 passed in 1.69s`; Ruff passed;
+  224 files were formatted; Mypy reported no issues in 71 source files; all five
+  vision acceptance groups passed; GNU/Ninja build, CTest 1/1, and all
+  pre-commit hooks passed.
+- GitHub Actions run `32662640913` passed the Windows/Ubuntu Python and C++
+  matrix for `2506f3b`, including schema/OpenUSD dependencies and the new tests.
+- Windows generated and reopened matching stages from both JSON and YAML under
+  the external data root. WSL2 generated and reopened the YAML stage under its
+  external data root. Required prims, `defaultPrim`, `metersPerUnit`, and Z-up
+  metadata passed inspection.
+
+### Git checkpoint
+
+- `2506f3b` — `feat(exchange): add workcell manifest contract`
+- `origin/main` remained at `c01e9a1`; no rebase, force-push, merge, or release
+  tag was performed in this cycle.
+- Next action: complete the final documentation/CI checkpoint and open a normal
+  PR from `win/bootstrap-desktop` into `main`.
