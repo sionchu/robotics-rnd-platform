@@ -8,9 +8,12 @@ from robotics_rnd.core import FrameId
 from robotics_rnd.core.geometry import Pose
 from robotics_rnd.robot import (
     CommandKind,
+    FaultCategory,
+    FaultSeverity,
     JointState,
     RobotCapability,
     RobotCommand,
+    RobotFaultRecord,
     RobotInterface,
     RobotMode,
     RobotResult,
@@ -28,7 +31,10 @@ class MockRobot(RobotInterface):
         self._joints = JointState(self._joint_names, tuple(0.0 for _ in self._joint_names))
         self._tool_pose = Pose.identity(self._base_frame)
         self._fault_message: str | None = None
+        self._fault: RobotFaultRecord | None = None
         self._command_counter = 0
+        self._digital_inputs: tuple[bool, ...] = (False,) * 16
+        self._digital_outputs: tuple[bool, ...] = (False,) * 16
 
     @property
     def capabilities(self) -> frozenset[RobotCapability]:
@@ -38,7 +44,11 @@ class MockRobot(RobotInterface):
                 RobotCapability.MOVE_JOINT,
                 RobotCapability.MOVE_LINEAR,
                 RobotCapability.STOP,
+                RobotCapability.CONTROLLED_STOP,
                 RobotCapability.RESET_FAULT,
+                RobotCapability.DIGITAL_INPUT,
+                RobotCapability.DIGITAL_OUTPUT,
+                RobotCapability.PAUSE_RESUME,
             }
         )
 
@@ -50,18 +60,23 @@ class MockRobot(RobotInterface):
             tool_pose=self._tool_pose,
             timestamp=datetime.now(UTC),
             fault_message=self._fault_message,
+            fault=self._fault,
+            digital_inputs=self._digital_inputs,
+            digital_outputs=self._digital_outputs,
         )
 
     def connect(self) -> RobotResult:
         self._connected = True
         self._mode = RobotMode.IDLE
         self._fault_message = None
+        self._fault = None
         return RobotResult(True, "mock robot connected", self._state())
 
     def disconnect(self) -> RobotResult:
         self._connected = False
         self._mode = RobotMode.DISCONNECTED
         self._fault_message = None
+        self._fault = None
         return RobotResult(True, "mock robot disconnected", self._state())
 
     def get_state(self) -> RobotState:
@@ -77,6 +92,26 @@ class MockRobot(RobotInterface):
         self._require_ready_for_command()
         if command.kind is CommandKind.STOP:
             return self.stop()
+        if command.kind is CommandKind.PAUSE:
+            self.require_capability(RobotCapability.PAUSE_RESUME)
+            self._mode = RobotMode.PAUSED
+            return RobotResult(True, "mock robot paused", self._state(), command.command_id)
+        if command.kind is CommandKind.RESUME:
+            self.require_capability(RobotCapability.PAUSE_RESUME)
+            self._mode = RobotMode.IDLE
+            return RobotResult(True, "mock robot resumed", self._state(), command.command_id)
+        if command.kind is CommandKind.WRITE_DIGITAL_OUTPUT:
+            self.require_capability(RobotCapability.DIGITAL_OUTPUT)
+            assert command.digital_channel is not None
+            assert command.digital_value is not None
+            if command.digital_channel >= len(self._digital_outputs):
+                raise ValueError(f"digital output channel {command.digital_channel} is unavailable")
+            values = list(self._digital_outputs)
+            values[command.digital_channel] = command.digital_value
+            self._digital_outputs = tuple(values)
+            self._command_counter += 1
+            command_id = command.command_id or f"mock-{self._command_counter:04d}"
+            return RobotResult(True, "mock digital output updated", self._state(), command_id)
         if command.kind is CommandKind.MOVE_JOINT:
             self.require_capability(RobotCapability.MOVE_JOINT)
             assert command.joint_positions_rad is not None
@@ -93,7 +128,7 @@ class MockRobot(RobotInterface):
             self._tool_pose = command.target_pose
         self._mode = RobotMode.IDLE
         self._command_counter += 1
-        command_id = f"mock-{self._command_counter:04d}"
+        command_id = command.command_id or f"mock-{self._command_counter:04d}"
         return RobotResult(True, "mock command completed", self._state(), command_id)
 
     def stop(self) -> RobotResult:
@@ -106,6 +141,14 @@ class MockRobot(RobotInterface):
         if not self._connected:
             raise RobotNotConnected("fault injection requires an active connection")
         self._fault_message = message
+        self._fault = RobotFaultRecord(
+            FaultCategory.APPLICATION,
+            FaultSeverity.ERROR,
+            "MOCK_INJECTED_FAULT",
+            message,
+            recoverable=True,
+            source="mock-robot",
+        )
         self._mode = RobotMode.FAULT
         return self._state()
 
@@ -113,5 +156,6 @@ class MockRobot(RobotInterface):
         if not self._connected:
             raise RobotNotConnected("fault reset requires an active connection")
         self._fault_message = None
+        self._fault = None
         self._mode = RobotMode.IDLE
         return RobotResult(True, "mock fault reset", self._state())
