@@ -53,14 +53,20 @@ canonical Ubuntu history and company/private-data boundaries.
 - Added schema, semantic, round-trip, OpenUSD reopen, and architecture tests.
 - Documented consumption/production boundaries for the future
   `manufacturing-digital-twin-rnd` repository.
+- Fetched Ubuntu's later Raspberry Pi edge milestone at `a545a2b` and merged it
+  into the published task branch without rebasing or force-pushing.
+- Preserved its edge capture/replay work and added a minimal Windows fallback
+  for POSIX-only peak-memory telemetry so the edge CLI remains importable on the
+  Windows CI leg.
 
 ## Current checkpoint
 
 - Branch: `win/bootstrap-desktop`
-- Base: `origin/main` at `c01e9a1`
-- Validated schema implementation baseline: `2506f3b`
+- Base: `origin/main` at `a545a2b`
+- Validated combined implementation baseline: `1807ef9`
 - Windows and the separate WSL2 Linux-filesystem clone are on the same task
-  branch. The branch is ready for final documentation, CI, and PR review.
+  branch. The branch contains the complete Ubuntu edge milestone and is ready
+  for final documentation, CI, and PR review.
 
 ## Decisions and reasons
 
@@ -82,16 +88,20 @@ canonical Ubuntu history and company/private-data boundaries.
 - Kept the USD example to empty transform/camera prims, because geometry,
   physics, processes, and manufacturing simulation belong in a future separate
   repository.
+- Merged the already-published Ubuntu commits instead of rebasing the published
+  Windows branch, avoiding a force-push while retaining both lines of history.
 
 ## Verification evidence
 
-- Windows Python: 56 passed; Ruff, formatting, Mypy (71 source files), and all
+- Windows Python: 69 passed with 1 hardware test deselected; Ruff, formatting,
+  Mypy (82 source files), and all
   pre-commit hooks passed.
 - Windows C++: MSVC build passed; CTest 1/1 passed.
 - Windows vision research: five acceptance groups passed.
 - Windows GPU smoke: PyTorch 2.12.1+cu130, CUDA runtime 13.0, RTX 4070 Ti,
   compute capability 8.9, checksum 7.302420616149902, status PASS.
-- WSL2 Python: 56 passed; Ruff, formatting, Mypy (71 source files), and all
+- WSL2 Python: 69 passed with 1 hardware test deselected; Ruff, formatting,
+  Mypy (82 source files), and all
   pre-commit hooks passed.
 - WSL2 C++: GNU/Ninja build passed; CTest 1/1 passed.
 - WSL2 vision research: five acceptance groups passed.
@@ -106,6 +116,8 @@ canonical Ubuntu history and company/private-data boundaries.
   transform edges, and unknown frame queries.
 - GitHub Actions run `32662640913` passed Python and C++ jobs on both
   `windows-latest` and `ubuntu-latest` for commit `2506f3b`.
+- The merged Windows and WSL2 suites also passed the seven Raspberry Pi
+  preparation gates without claiming physical hardware results.
 - Isaac Sim 6.0.1 packaged compatibility checker exited successfully; the
   readiness assessment remains limited by 12,282 MiB VRAM.
 

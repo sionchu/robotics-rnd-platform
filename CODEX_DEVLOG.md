@@ -340,3 +340,25 @@
 - v0.2.1 preparation is complete, but the milestone is not physically complete. Per the master prompt, `v0.2.1-pi-camera-edge-lab` must not be created until real Pi/camera gates pass.
 - The exact next action is `docs/research/PI_CAMERA_HARDWARE_HANDOFF.md`: establish reviewed SSH reachability, detect the actual sensor/modes, capture and measure targets/data, run three real calibrations, real AprilTag/PnP/repeatability/sensitivity, and same-dataset Pi/laptop comparison.
 - RB control, Mech-Eye/Mech-Vision, ROS 2 edge publishing, Jetson/CUDA, network streaming, and live robot motion remain out of scope and unvalidated.
+
+## 2026-08-24 — Late Ubuntu milestone integration
+
+- A final fetch detected that `origin/main` advanced from `c01e9a1` to
+  `a545a2b` through three Raspberry Pi edge commits after the Workcell Exchange
+  CI run had completed.
+- Merged `origin/main` into the already-published `win/bootstrap-desktop` branch
+  instead of rebasing or force-pushing. README and devlog conflicts were resolved
+  by retaining both the edge milestone and Workcell Exchange records; CI,
+  package metadata, architecture boundaries, and roadmap changes combined
+  cleanly.
+- The combined Windows test initially exposed a POSIX-only top-level `resource`
+  import in the new edge CLI. Replaced it with a lazy optional import and a
+  `None` memory fallback on platforms without the module; Linux peak-RSS behavior
+  remains unchanged.
+- Merge checkpoint `1807ef9` passed 69 Python tests with the explicit hardware
+  test deselected on both Windows and the WSL2 Linux-filesystem clone. Ruff,
+  formatting, Mypy over 82 source files, all five vision gates, all seven Pi
+  preparation gates, OpenUSD generation, native C++ builds, CTest 1/1, and WSL2
+  pre-commit all passed.
+- No Pi connection, live camera, robot, manufacturing simulation, Blender,
+  Docker, CUDA Toolkit, or Isaac feature was introduced or executed.

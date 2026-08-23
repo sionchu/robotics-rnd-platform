@@ -19,19 +19,22 @@ Machine role: Windows RTX desktop with a WSL2 companion environment
 - Workcell Exchange Schema 1.0 with equivalent JSON/YAML manifests, required
   frame roles, normalized XYZW transforms, core-backed graph validation, and a
   manifest-driven OpenUSD workcell.
+- Raspberry Pi camera edge capture/replay contracts, physical-measurement
+  preparation, and hardware-independent CLI/tests from the Ubuntu v0.2.1
+  milestone. Physical Pi execution remains pending.
 - Data, model, asset, recording, and company-IP separation rules that keep large
   or restricted material outside Git.
 
 ## Current branch/version
 
 - Integration branch: `win/bootstrap-desktop`
-- Base: `origin/main` at `c01e9a1` (`v0.2.0-vision-foundation`)
-- Package version: `0.2.0`
+- Base: `origin/main` at `a545a2b`
+- Package version: `0.2.1`
 
 ## Latest validated commit
 
-- `2506f3b` — Workcell Exchange Schema, JSON/YAML manifests, core transform
-  validation, OpenUSD generation, tests, CI, and consumer/producer documentation.
+- `1807ef9` — merged Ubuntu's Raspberry Pi edge milestone into the Workcell
+  Exchange/Windows branch and hardened POSIX peak-memory telemetry for Windows.
 - The final documentation/executable-mode checkpoint is the current `HEAD` on
   `win/bootstrap-desktop`.
 
@@ -48,7 +51,8 @@ Machine role: Windows RTX desktop with a WSL2 companion environment
 
 - Windows 11, Python 3.12.10 repository environment, MSVC 19.44, CMake 4.1.1,
   Ninja 1.13.2, and Git 2.48.1.
-- Python: 56 tests passed; Ruff, Ruff formatting, Mypy, and pre-commit passed.
+- Python: 69 tests passed with 1 hardware test deselected; Ruff, Ruff formatting,
+  Mypy, and pre-commit passed.
 - Native C++: Visual Studio generator build passed; CTest 1/1 passed.
 - Vision research: all five synthetic acceptance groups passed.
 - PyTorch 2.12.1 with CUDA 13.0 successfully executed the RTX 4070 Ti smoke
@@ -60,7 +64,8 @@ Machine role: Windows RTX desktop with a WSL2 companion environment
 
 - Ubuntu 24.04.3 under WSL2 with Python 3.12.3, GCC/G++ 13.3, CMake 3.28.3,
   Ninja 1.13.0, and Git 2.43.0.
-- Python: 56 tests passed; Ruff, Ruff formatting, Mypy, and pre-commit passed.
+- Python: 69 tests passed with 1 hardware test deselected; Ruff, Ruff formatting,
+  Mypy, and pre-commit passed.
 - Native C++: Ninja/GNU build passed; CTest 1/1 passed.
 - Vision research: all five synthetic acceptance groups passed.
 - PyTorch 2.12.1 with CUDA 13.0 successfully executed the RTX 4070 Ti smoke
@@ -74,6 +79,7 @@ Machine role: Windows RTX desktop with a WSL2 companion environment
 - Authorized Rainbow robot connection, state, I/O, and motion behavior.
 - Mech-Eye/Mech-Vision acquisition through an official SDK environment.
 - Ubuntu laptop host GPU test outside the prior isolated execution environment.
+- Physical Raspberry Pi camera bring-up and experiments 006–012.
 
 ## Known simulation-only tests
 
@@ -91,6 +97,8 @@ Machine role: Windows RTX desktop with a WSL2 companion environment
   CUDA runtime packaged with PyTorch.
 - WSL2 does not have GitHub CLI; Git fetch works through command-scoped Windows
   Git Credential Manager integration.
+- Raspberry Pi physical evidence is pending the repository's documented hardware
+  handoff and does not block hardware-independent PR review.
 
 ## Next recommended task
 
