@@ -1,0 +1,61 @@
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+build/
+dist/
+
+# Editors and local configuration
+.idea/
+.vscode/
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+credentials*
+secrets*
+
+# C++
+cpp/build/
+CMakeFiles/
+CMakeCache.txt
+compile_commands.json
+
+# Data, models, captures, bags, and media
+datasets/raw/**
+datasets/processed/**
+models/pretrained/**
+models/trained/**
+*.bag
+*.db3
+*.mcap
+*.ply
+*.pcd
+*.npy
+*.npz
+*.onnx
+*.engine
+*.pt
+*.pth
+*.avi
+*.mp4
+*.mov
+
+# Vendor packages and archives
+vendor/
+vendor_sdk/
+*.deb
+*.rpm
+*.tar
+*.tar.gz
+*.tgz
+*.zip
+
+# Experiment outputs (documentation stays tracked)
+experiments/**/results/*
+!experiments/**/results/README.md

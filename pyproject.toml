@@ -1,0 +1,61 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "robotics-rnd-platform"
+version = "0.1.0"
+description = "Vendor-independent robotics research contracts, mocks, and experiments"
+readme = "README.md"
+requires-python = ">=3.12,<3.14"
+license = {text = "Proprietary - private research repository"}
+authors = [{name = "sionchu"}]
+dependencies = ["numpy>=1.26,<3"]
+
+[project.optional-dependencies]
+dev = [
+  "mypy>=1.11",
+  "pre-commit>=3.8",
+  "pytest>=8.3",
+  "ruff>=0.6",
+]
+vision = ["opencv-python-headless>=4.10"]
+ros = []
+nvidia = []
+
+[project.scripts]
+robotics-rnd-doctor = "robotics_rnd.core.diagnostics:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+addopts = "-ra --strict-markers"
+testpaths = ["tests"]
+markers = [
+  "hardware: requires explicitly authorized physical hardware",
+  "vendor: requires a separately installed vendor SDK",
+]
+
+[tool.ruff]
+line-length = 110
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.mypy]
+python_version = "3.12"
+check_untyped_defs = true
+disallow_untyped_defs = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+packages = ["robotics_rnd"]
+
+[[tool.mypy.overrides]]
+module = "numpy.*"
+ignore_missing_imports = true
