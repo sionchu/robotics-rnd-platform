@@ -48,6 +48,9 @@
 - C++ configure/build: passed with CMake 3.28.3, Ninja 1.11.1, and GNU C++ 13.2.0.
 - CTest: `1/1` passed.
 - Pre-commit: every configured hook passed using a temporary writable cache.
+- Initial remote GitHub Actions run: Python and C++ jobs passed. Its deprecated
+  action-runtime warnings were then removed by pinning the current official
+  Checkout v7.0.1 and Setup Python v7.0.0 release commit SHAs.
 - Mock guidance application: reached `COMPLETED`, produced deterministic command `mock-0001`, and reported `hardware_validated: false`.
 - Bootstrap dry run: passed without installing ROS, CUDA, or vendor software.
 - Repository audit: no tracked binaries, no tracked file over 1 MiB, no detected credential/private-key/serial/IP patterns, and no vendor or KAI source artifacts.
@@ -68,6 +71,7 @@
 - `0c63c4e` — `feat(platform): add generic contracts mocks and tests`
 - `c8bfd59` — `feat(research): add workflows hardware plans and resources`
 - Final verification/devlog checkpoint: the commit containing this entry.
+- CI hardening checkpoint: the commit containing the SHA-pinned current action releases.
 
 ### Unresolved constraints and risks
 
