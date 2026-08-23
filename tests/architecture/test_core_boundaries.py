@@ -4,6 +4,7 @@ import ast
 from pathlib import Path
 
 FORBIDDEN_ROOTS = {
+    "cv2",
     "rbpodo",
     "mecheye",
     "rclpy",

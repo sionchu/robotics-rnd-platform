@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "robotics-rnd-platform"
-version = "0.1.0"
-description = "Vendor-independent robotics research contracts, mocks, and experiments"
+version = "0.2.0"
+description = "Vendor-independent robotics research contracts and measurable vision foundations"
 readme = "README.md"
 requires-python = ">=3.12,<3.14"
 license = {text = "Proprietary - private research repository"}
@@ -19,12 +19,13 @@ dev = [
   "pytest>=8.3",
   "ruff>=0.6",
 ]
-vision = ["opencv-python-headless>=4.10"]
+vision = ["opencv-python-headless>=4.10,<5"]
 ros = []
 nvidia = []
 
 [project.scripts]
 robotics-rnd-doctor = "robotics_rnd.core.diagnostics:main"
+robotics-rnd-vision = "robotics_rnd.vision.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
