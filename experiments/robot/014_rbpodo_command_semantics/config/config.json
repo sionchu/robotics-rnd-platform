@@ -1,0 +1,5 @@
+{
+  "scenarios": ["normal_completion", "motion_timeout", "delayed_response", "duplicate_response", "unexpected_response"],
+  "live_verified": false,
+  "hardware_validation": false
+}

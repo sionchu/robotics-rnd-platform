@@ -1,0 +1,6 @@
+{
+  "faults": ["connect_timeout", "connection_drop_during_command", "stale_state"],
+  "auto_reconnect": false,
+  "require_resync_ack": true,
+  "hardware_validation": false
+}

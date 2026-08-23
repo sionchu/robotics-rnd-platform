@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "robotics-rnd-platform"
-version = "0.2.1"
-description = "Vendor-independent robotics research with a prepared Raspberry Pi edge camera boundary"
+version = "0.3.0"
+description = "Vendor-independent robotics research with audited Rainbow control foundations"
 readme = "README.md"
 requires-python = ">=3.12,<3.14"
 license = {text = "Proprietary - private research repository"}
@@ -27,6 +27,7 @@ nvidia = []
 robotics-rnd-doctor = "robotics_rnd.core.diagnostics:main"
 robotics-rnd-vision = "robotics_rnd.vision.cli:main"
 robotics-rnd-edge = "robotics_rnd.edge.pi_camera:main"
+robotics-rnd-rb = "robotics_rnd.rb:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

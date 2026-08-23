@@ -1,0 +1,23 @@
+{
+  "acceptance": {
+    "all_control_box_channels_round_trip": true,
+    "fake_backend_received_16_valid_writes": true,
+    "no_tool_io_claim": true,
+    "read_only_does_not_claim_output": true,
+    "zero_based_channel_16_rejected": true
+  },
+  "decision": "PROMOTE_TO_PLATFORM",
+  "evidence_class": [
+    "SOURCE_VERIFIED",
+    "MOCK_VERIFIED"
+  ],
+  "experiment": "016_rb_io_contract",
+  "hardware_validation": false,
+  "max_hardware_validation_level": 0,
+  "source_findings": {
+    "control_box_digital_inputs": 16,
+    "control_box_digital_outputs": 16,
+    "indexing": "0..15",
+    "tool_io": "model-dependent; not promoted as generic Rainbow capability"
+  }
+}

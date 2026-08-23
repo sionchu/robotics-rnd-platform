@@ -1,0 +1,25 @@
+{
+  "acceptance": {
+    "ambiguous_command_is_unknown": true,
+    "connect_failure_not_connected": true,
+    "explicit_ack_allows_new_command": true,
+    "motion_locked_until_acknowledged": true,
+    "no_automatic_resume": true,
+    "reconnect_state_synchronized": true,
+    "stale_state_degrades_connection": true
+  },
+  "decision": "PROMOTE_TO_PLATFORM",
+  "evidence_class": [
+    "MOCK_VERIFIED"
+  ],
+  "experiment": "015_rb_fault_reconnect",
+  "hardware_validation": false,
+  "max_hardware_validation_level": 0,
+  "observed": {
+    "ambiguous_command_status": "UNKNOWN",
+    "blocked_command_code": "RESYNC_REQUIRED",
+    "connect_failure_code": "CONNECT_FAILED",
+    "recovered_status": "COMPLETED",
+    "stale_connection_state": "DEGRADED"
+  }
+}

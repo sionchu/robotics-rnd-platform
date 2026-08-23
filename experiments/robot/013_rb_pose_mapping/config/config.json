@@ -1,0 +1,6 @@
+{
+  "cases": ["zero", "translation", "rotate_x", "rotate_y", "rotate_z", "combined", "gimbal_positive", "gimbal_negative"],
+  "rotation_tolerance": 1e-8,
+  "translation_tolerance_mm": 1e-9,
+  "hardware_validation": false
+}

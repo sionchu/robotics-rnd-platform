@@ -1,0 +1,59 @@
+{
+  "acceptance": {
+    "all_rotation_round_trips_match": true,
+    "invalid_values_rejected": true,
+    "max_translation_error_below_1e_9_mm": true
+  },
+  "cases": [
+    {
+      "case": "zero",
+      "rotation_matrix_matches": true,
+      "translation_error_mm": 0.0
+    },
+    {
+      "case": "translation",
+      "rotation_matrix_matches": true,
+      "translation_error_mm": 0.0
+    },
+    {
+      "case": "rotate_x",
+      "rotation_matrix_matches": true,
+      "translation_error_mm": 0.0
+    },
+    {
+      "case": "rotate_y",
+      "rotation_matrix_matches": true,
+      "translation_error_mm": 0.0
+    },
+    {
+      "case": "rotate_z",
+      "rotation_matrix_matches": true,
+      "translation_error_mm": 0.0
+    },
+    {
+      "case": "combined",
+      "rotation_matrix_matches": true,
+      "translation_error_mm": 0.0
+    },
+    {
+      "case": "gimbal_positive",
+      "rotation_matrix_matches": true,
+      "translation_error_mm": 0.0
+    },
+    {
+      "case": "gimbal_negative",
+      "rotation_matrix_matches": true,
+      "translation_error_mm": 0.0
+    }
+  ],
+  "decision": "PROMOTE_TO_PLATFORM",
+  "evidence_class": [
+    "SOURCE_VERIFIED",
+    "MOCK_VERIFIED"
+  ],
+  "experiment": "013_rb_pose_mapping",
+  "hardware_validation": false,
+  "max_hardware_validation_level": 0,
+  "platform_convention": "metres, XYZW unit quaternion, explicit parent frame",
+  "vendor_convention": "[x_mm,y_mm,z_mm,rx_deg,ry_deg,rz_deg], Rz@Ry@Rx"
+}

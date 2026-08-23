@@ -1,0 +1,6 @@
+{
+  "control_box_channels": 16,
+  "indexing": "zero_based",
+  "tool_io_promoted": false,
+  "hardware_validation": false
+}

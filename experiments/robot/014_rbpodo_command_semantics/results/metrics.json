@@ -1,0 +1,31 @@
+{
+  "acceptance": {
+    "accepted_timeout_not_completed": true,
+    "completed_requires_completion_evidence": true,
+    "response_anomalies_recorded": true
+  },
+  "decision": "PROMOTE_TO_PLATFORM",
+  "evidence_class": [
+    "SOURCE_VERIFIED",
+    "MOCK_VERIFIED"
+  ],
+  "experiment": "014_rbpodo_command_semantics",
+  "hardware_validation": false,
+  "live_verified": false,
+  "max_hardware_validation_level": 0,
+  "mock_statuses": {
+    "anomaly_diagnostics": [
+      "injected_delayed_response",
+      "injected_duplicate_response_ignored",
+      "injected_unexpected_response_quarantined"
+    ],
+    "motion_timeout": "TIMED_OUT",
+    "normal": "COMPLETED"
+  },
+  "source_findings": {
+    "ack_meaning": "command received/executed acknowledgement; not motion completion",
+    "completion_signal": "motion_changed start/finish broadcast messages",
+    "multiple_clients": "broadcast responses may include unrelated client errors",
+    "response_buffer_rule": "flush before command/wait to avoid stale messages"
+  }
+}

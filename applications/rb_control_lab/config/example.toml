@@ -1,0 +1,15 @@
+# Safe, non-secret example only. No controller address belongs in version control.
+[rainbow]
+operation_mode = "READ_ONLY"
+motion_enabled = false
+io_write_enabled = false
+auto_reconnect = false
+command_port = 5000
+data_port = 5001
+connect_timeout_s = 3.0
+command_timeout_s = 5.0
+state_timeout_s = 1.0
+
+[evidence]
+hardware_validation = false
+max_hardware_validation_level = 0
