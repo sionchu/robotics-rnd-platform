@@ -14,6 +14,15 @@ Coordinate-frame exercises; camera model; OpenCV calibration; AprilTag/ArUco;
 PnP; reprojection/error analysis; recorded generic fixtures; sensitivity study;
 benchmark schema. Validation is synthetic/replay-only.
 
+## Phase 1.1 — Pi Camera & Edge Vision (`BLOCKED-EXTERNAL`)
+
+Adapter lifecycle, metadata normalization, capture/dataset/replay tooling,
+calibration binding, physical protocols, experiments 006–012, deployment, and
+hardware-free tests are prepared. The Pi was unreachable, so sensor/modes,
+real calibration/PnP/repeatability/sensitivity, and Pi-vs-laptop measurements
+remain `NOT_RUN_HARDWARE_UNAVAILABLE`. Complete the exact hardware handoff before
+release tagging or physical promotion.
+
 ## Phase 2 — RB Robot Control Lab (`NEXT`)
 
 Review supported controller and official `rbpodo` versions; safe connection and
@@ -37,10 +46,10 @@ skill; correction loop; mock, replay, simulation, then authorized hardware.
 ROS 2 Jazzy bridge; TF2; rosbag2; RViz2; messages/services/actions justified by
 use cases. Core remains importable without ROS.
 
-## Phase 6 — Edge deployment (`PLANNED`)
+## Phase 6 — Extended edge deployment (`PLANNED`)
 
-Raspberry Pi 4 camera acquisition, profiling, remote deployment/debugging, and a
-repeatable laptop CPU versus Pi CPU comparison.
+After v0.2.1 physical evidence: extended Pi accuracy/dynamics, optional ROS 2
+image bridge, additional edge targets, profiling, and deployment hardening.
 
 ## Phase 7 — GPU robotics (`BLOCKED-EXTERNAL`)
 

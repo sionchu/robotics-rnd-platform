@@ -1,12 +1,15 @@
 # Robotics R&D Platform
 
 A private, vendor-independent foundation for robotics learning, experiments,
-reusable skills, and future applications. Version 0.2 adds a measured CPU vision
-foundation—camera calibration, AprilTag detection, PnP pose, transform-chain
-validation, and sensitivity analysis—while preserving the v0.1 architecture.
+reusable skills, and future applications. Version 0.2 provides the measured CPU
+vision foundation. Version 0.2.1 prepares a Raspberry Pi camera edge node,
+auditable physical datasets, replay, and measurement workflows while preserving
+the same generic architecture.
 
 This repository is not KAI Robotics Vision, contains none of its source/history
-or operational data, and does not claim live robot or camera validation.
+or operational data, and does not claim live robot or camera validation. The Pi
+was unreachable during v0.2.1 preparation, so all physical experiments remain
+`NOT_RUN_HARDWARE_UNAVAILABLE` and no v0.2.1 release tag is created yet.
 
 ## Current capabilities
 
@@ -23,6 +26,14 @@ or operational data, and does not claim live robot or camera validation.
 - planar PnP producing tested `T_camera_tag` transforms and pose-error metrics;
 - synthetic/replay images, compact generated fixtures, and five complete research experiments;
 - portable CPU/GPU/edge benchmark-result schema with no fabricated GPU results;
+- lazy Picamera2 adapter boundary with lifecycle, supported-control checks, and
+  normalized metadata, requiring no Pi packages in normal CI;
+- versioned capture dataset manifests, on-disk replay, calibration provenance,
+  tested intrinsic scaling, pose repeatability, and cross-host comparison;
+- safe SSH/rsync deployment/capture/fetch tools and a printable measured-size
+  `tag36h11` target generator;
+- experiments 006–012 fully prepared with explicit hardware-pending status and
+  an exact physical lab handoff;
 - Python quality gates, architecture-boundary tests, and independent C++17 CMake/CTest baseline;
 - experiment template, learning roadmap, hardware notes, and curated official resources.
 
@@ -55,14 +66,17 @@ python -m applications.vision_lab.mock_guidance
 python -m robotics_rnd.vision calibration
 python -m robotics_rnd.vision apriltag
 python -m robotics_rnd.vision pnp
+python -m robotics_rnd.edge --help
 python -m experiments.vision.run_all all
+python -m experiments.vision.pi_edge verify-preparation
 cmake -S cpp -B cpp/build -G Ninja
 cmake --build cpp/build
 ctest --test-dir cpp/build --output-on-failure
 ```
 
-None of these commands require hardware, ROS 2, CUDA, or a vendor SDK. The
-vision commands are explicitly synthetic/replay validation.
+None of these commands require hardware, ROS 2, CUDA, Picamera2, or a vendor
+SDK. The v0.2 vision commands are synthetic/replay validation; the v0.2.1
+preparation verifier rejects fabricated physical measurements.
 
 ## Start a research experiment
 
@@ -85,6 +99,6 @@ results, and conclusion before promoting code. See `RESEARCH_WORKFLOW.md`.
 - `tests`: unit, integration, and enforceable architecture constraints.
 
 Read `ARCHITECTURE.md`, `SECURITY_AND_IP.md`, and `AGENTS.md` before extending
-the platform. The next recommended milestone is live-camera validation using a
-generic image-source adapter and a physically printed target; robot motion
-remains out of scope until perception uncertainty is measured on real optics.
+the platform. The next task is the hardware execution in
+`docs/research/PI_CAMERA_HARDWARE_HANDOFF.md`; robot motion remains out of scope
+until perception uncertainty is measured on real optics.
