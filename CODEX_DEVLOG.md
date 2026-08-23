@@ -202,3 +202,54 @@
 - v0.2.1 preparation is complete, but the milestone is not physically complete. Per the master prompt, `v0.2.1-pi-camera-edge-lab` must not be created until real Pi/camera gates pass.
 - The exact next action is `docs/research/PI_CAMERA_HARDWARE_HANDOFF.md`: establish reviewed SSH reachability, detect the actual sensor/modes, capture and measure targets/data, run three real calibrations, real AprilTag/PnP/repeatability/sensitivity, and same-dataset Pi/laptop comparison.
 - RB control, Mech-Eye/Mech-Vision, ROS 2 edge publishing, Jetson/CUDA, network streaming, and live robot motion remain out of scope and unvalidated.
+
+## 2026-08-23 — v0.3 RB control and external research intake
+
+### Baseline and research intake
+
+- Read the complete 3,410-line v0.3 master prompt and re-inspected the repository source of truth, migration/IP records, generic robot/vision/core contracts, tests, Git history, tags, and synchronized private remote.
+- Started from clean `main` at `a545a2b`. The unchanged baseline passed 61 Python tests with one expected Pi hardware skip, all v0.2 and v0.2.1 gates, Ruff/format, mypy over 80 source files, CMake, and CTest.
+- Added a reusable external intake lifecycle, per-source guidance, repository/library/paper/algorithm/vendor/dataset registries, decision vocabulary, algorithm/paper templates, dry-run-first ignored clone helper, and prioritized research backlog.
+- Reviewed only public/official material for rbpodo, rbpodo_ros2, RB Cobot documentation, and ros2_control. External repositories were inspected in `/tmp`; no external code was executed or copied.
+
+### Current RB ecosystem findings
+
+- Reviewed rbpodo v0.16.14 at `f6ef41adf629dd27c96b0d3e7ebf3d3fc0cc53c4`, Apache-2.0, released 2026-07-23. Its API remains explicitly evolving. PyPI metadata, public API/source, examples, changelog, and narrowly relevant issues/PRs were cross-checked.
+- Recorded command port 5000, data port 5001, synchronous constructor connection without an exposed connect timeout, separate data channel, documented SI conversion needs, control-box I/O surfaces, response broadcasts, flush/stale-buffer risk, and ACK-versus-motion-completion semantics.
+- Reviewed unreleased rbpodo_ros2 main at `5e8294a985e7ce5e20e70564c2681130afc5f502`; it targets Humble, warns against production use, has no root license, and is `REFERENCE_ONLY`. Aggregate license is `NOASSERTION`; no package/code was copied.
+- Decisions: rbpodo `WRAP_WITH_ADAPTER`; rbpodo_ros2/RB docs/ROS 2 `REFERENCE_ONLY`; Rainbow unit/pose mapping `REIMPLEMENT_GENERIC`.
+
+### Robot-control implementation
+
+- Extended generic capabilities, commands, state snapshots, connection states, structured faults, command lifecycle/evidence, timestamps, result diagnostics, I/O, pause/resume, controlled stop, and conservative transitions while preserving v0.1/v0.2 call compatibility.
+- Added a read-only-by-default Rainbow configuration, protocol-owned backend DTOs, deterministic fake/fault backend, isolated lazy rbpodo backend with exact version/feature checks, SI/joint/pose/Euler ZYX mapping, serialized calls, and no vendor objects or imports outside the Rainbow package.
+- Connection ambiguity now marks an in-flight command `UNKNOWN`, degrades connection, locks motion, never replays/resumes work, synchronizes state on explicit reconnect, and requires a stable-state acknowledgement before a new command.
+- Added portable redacted JSONL journals, session/application events, state/result serialization, deterministic `ReplayRobot`, and `RobotApplicationService` for an HMI-independent facade.
+- Added installed-package-safe RB CLI commands for status, read-only capabilities, mock demo, fault demo, and replay only. No CLI accepts a live address or constructs the vendor backend.
+
+### Experiments and promotion
+
+- Experiment 013 validated eight zero/translation/axis/combined/gimbal pose cases, finite/frame validation, zero observed translation round-trip error, and rotation-matrix equivalence. Decision: `PROMOTE_TO_PLATFORM`.
+- Experiment 014 separated send/ACK/start/finish/timeout and quarantined delayed/duplicate/unexpected responses using `SOURCE_VERIFIED` and `MOCK_VERIFIED` evidence. `LIVE_VERIFIED` is false. Decision: `PROMOTE_TO_PLATFORM`.
+- Experiment 015 covered connect timeout, in-flight disconnect, `UNKNOWN`, reconnect, state resync, motion lock, explicit acknowledgement, no automatic resume, and stale state. Decision: `PROMOTE_TO_PLATFORM` for software semantics only.
+- Experiment 016 validated documented control-box digital channels 0–15, invalid channel 16, read-only capability reduction, and exclusion of model-dependent tool I/O. Decision: `PROMOTE_TO_PLATFORM`.
+
+### Architecture, provenance, and hardware boundary
+
+- Added robot-control safety/HMI rebuild architecture, ADR, exact compatibility/risk/version matrices, LEVEL 0–4 definitions, exact future LEVEL 1 read-only handoff, third-party provenance, and software-only release notes.
+- KAI Robotics Vision remains external with no source/history/data migration. Mech-Mind stays behind `VisionInterface`; ROS stays optional; the v0.2.1 Pi hardware-pending artifacts and no-tag status remain unchanged.
+- Release classification is `SOFTWARE_VALIDATED`, `HARDWARE_NOT_VALIDATED`, `hardware_validation: false`, and `max_hardware_validation_level: 0`. No RB hardware, controller, address, network, state, I/O, stop, motion, timing, or compatibility was accessed or claimed.
+
+### Verification
+
+- Python: `96 passed, 1 skipped`; the skip remains the explicit opt-in Pi hardware test.
+- v0.2 synthetic/replay, v0.2.1 hardware-pending, and all four v0.3 robot experiment/release gates passed.
+- Ruff lint and format passed across 298 files; mypy passed over 89 source files; CMake/build and CTest `1/1` passed.
+- The 0.3.0 wheel built in isolated PEP 517 mode and imported/runs the mock CLI in a fresh environment without rbpodo.
+- Pre-commit, staged IP audit, final GitHub Actions state, push, and tag outcome are recorded by the final repository state after those gates complete.
+
+### Remaining evidence and recommended next work
+
+- RB physical validation is LEVEL 0. The first future hardware action is the exact read-only LEVEL 1 handoff; motion and all writes remain unauthorized.
+- Raspberry Pi physical work remains `NOT_RUN_HARDWARE_UNAVAILABLE` under its existing handoff.
+- Without hardware, the recommended next milestone is the Mech-Eye 3D Vision Lab: intake the official SDK/API, preserve acquisition/provider separation, and benchmark platform-owned point-cloud/pose contracts without vendor leakage.

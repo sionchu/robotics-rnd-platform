@@ -24,7 +24,7 @@ Statuses describe repository evidence, not the user's personal mastery:
 | 16 | Calibration quality | EXPERIMENT_AVAILABLE | Design image-coverage and outlier-rejection extensions | Live camera readiness |
 | 17 | Pose uncertainty | EXPERIMENT_AVAILABLE | Add a multifactor/covariance study without overclaiming | Guidance gating |
 | 18 | ROS 2 Jazzy / TF2 | REFERENCE_CREATED | Map one platform camera/transform fixture and compare numerically | Optional integration |
-| 19 | Robot interfaces and safety | USER_STUDY_PENDING | Extend mock/replay before authorized hardware | RB control lab |
+| 19 | Robot interfaces and safety | EXPERIMENT_AVAILABLE | Reproduce experiments 013–016; explain ACK/completion, uncertainty, resync, and controlled-stop limits | RB control lab |
 | 20 | 3D vision / point clouds | NOT_STARTED | Acquisition-independent filtering/registration benchmark | Mech-Eye lab |
 | 21 | CUDA / ONNX / TensorRT | NOT_STARTED | Resolve native GPU access, then benchmark a justified workload | GPU robotics |
 | 22 | Simulation / Physical AI | NOT_STARTED | Reproducible simulator scenario with sim-to-real assumptions | Digital twin |

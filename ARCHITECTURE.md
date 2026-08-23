@@ -61,9 +61,19 @@ platform wholesale.
 
 ## Hardware boundaries
 
-`RobotInterface` exposes capability discovery and generic state/command/result
-models. `MockRobot` proves the contract. `RainbowRobotDriver` is an explicit safe
-skeleton; `rbpodo` must never leak through its public API.
+`RobotInterface` exposes capability discovery and generic state, command,
+result, fault, connection, and lifecycle models. `MockRobot` proves the neutral
+contract. `RobotApplicationService` projects backend-independent HMI state and
+writes a redacted portable journal; `ReplayRobot` reproduces recorded results.
+
+`RainbowRobotDriver` is inert when unconfigured, read-only by default, and uses
+an injected backend. The deterministic fake covers normal, timeout, rejection,
+connection-drop, stale-state, controller-fault, I/O-failure, and response-anomaly
+paths. The optional `RbpodoBackend` lazily imports only reviewed rbpodo versions.
+Vendor objects/units never cross the driver. ACK is acceptance, not completion;
+uncertain in-flight work becomes `UNKNOWN`, reconnect never resumes it, and
+motion stays locked pending explicit stable-state acknowledgement. See
+`docs/architecture/ROBOT_CONTROL_SAFETY_BOUNDARY.md`.
 
 `VisionInterface` returns vendor-neutral observations. `MockVision` and
 `ReplayVision` prove deterministic behavior. Direct Mech-Eye capture and
@@ -87,12 +97,17 @@ explicit helper. Hardware absence never blocks core, replay, or CI.
 Raspberry Pi and Jetson are deployment targets. ROS 2 and Isaac ROS are
 integrations. The repository must remain useful when all of them are absent.
 
+The official `rbpodo_ros2` repository is a reference, not a dependency. A future
+ROS 2 Jazzy/ros2_control bridge must map platform DTOs under `integrations/ros2`
+and cannot become the application or core API.
+
 ## Research-to-application boundary
 
 Experiments retain hypotheses, environment, metrics, results, and conclusions.
 Only validated work with stable tests graduates into `src/robotics_rnd`. Skills
 then compose interfaces into reusable behavior; applications supply concrete
-drivers. See `RESEARCH_WORKFLOW.md`.
+drivers. External technologies first pass the registries/intake/decision process.
+See `RESEARCH_WORKFLOW.md` and `docs/research/EXTERNAL_RESEARCH_INTAKE.md`.
 
 ## Repository separation
 

@@ -1,21 +1,23 @@
 # Rainbow Robotics Research Boundary
 
-The current platform provides a generic robot contract, deterministic mock, and
-an unavailable `RainbowRobotDriver` skeleton. No RB controller, SDK, or live
-motion was accessed or validated.
+The current platform provides generic lifecycle/fault/state contracts, mock and
+replay drivers, a read-only-by-default `RainbowRobotDriver`, an optional lazy
+rbpodo backend, and a deterministic fake/fault backend. No RB controller, SDK
+runtime, network, state, I/O, stop, or motion was accessed or validated.
 
-Future mapping points: connect/disconnect; state; joint/linear motion; stop;
-pause/resume if supported; reset fault; digital I/O; timeouts; capability
-discovery; vendor error translation. Do not expose `rbpodo` objects/enums.
+Software mappings cover connect/disconnect, state, joint/linear commands,
+controlled stop, pause/resume, box digital I/O, timeouts, capabilities, unit/pose
+conversion, and conservative faults. They are `SOURCE_VERIFIED`/`MOCK_VERIFIED`,
+not physical evidence. Do not expose `rbpodo` objects/enums.
 
-Before live work: pin controller/firmware/SDK versions; review official safety
-and operating manuals; establish a physical E-stop and controlled workspace;
-define speed/payload/tool limits; validate read-only state first; then simulation;
-then supervised low-risk commands. Record results outside generic core tests.
+Before live work follow `docs/research/RB_HARDWARE_HANDOFF.md`. The first and only
+currently authorized stage is LEVEL 1 read-only: pin controller/firmware/SDK
+versions, review safety/ownership, connect once, read bounded state/I/O, and
+disconnect. Motion and all writes remain forbidden.
 
 Target architecture:
 
 ```text
-Linux HMI -> Job engine -> RobotManager -> Rainbow adapter -> rbpodo -> RB controller
-                         \-> VisionManager -> VisionInterface
+Linux HMI -> RobotApplicationService -> RobotInterface -> Rainbow adapter -> optional rbpodo
+                         \-> JSONL journal -> ReplayRobot
 ```

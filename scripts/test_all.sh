@@ -7,6 +7,8 @@ cd "$PROJECT_ROOT"
 python -m pytest
 python -m experiments.vision.run_all all --verify-only
 python -m experiments.vision.pi_edge verify-preparation
+python -m experiments.robot.run_all verify
+python scripts/verify_v03_release.py
 python -m ruff check .
 python -m ruff format --check .
 python -m mypy

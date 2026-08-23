@@ -23,14 +23,16 @@ real calibration/PnP/repeatability/sensitivity, and Pi-vs-laptop measurements
 remain `NOT_RUN_HARDWARE_UNAVAILABLE`. Complete the exact hardware handoff before
 release tagging or physical promotion.
 
-## Phase 2 — RB Robot Control Lab (`NEXT`)
+## Phase 2 — RB Robot Control Lab (`DONE-SOFTWARE`)
 
-Review supported controller and official `rbpodo` versions; safe connection and
-state acquisition; capability mapping; mock/replay logs; joint/linear commands;
-digital I/O; fault behavior; explicit hardware safety checklist. No live command
-before those gates.
+External intake, current official rbpodo/rbpodo_ros2/docs review, neutral command
+lifecycle/fault/state hardening, optional Rainbow adapter, fake/fault backend,
+pose/I/O mapping, journal/replay, application service, Control Lab demos, and
+experiments 013–016 are complete. Status is `SOFTWARE_VALIDATED` and
+`HARDWARE_NOT_VALIDATED`, maximum physical validation LEVEL 0. The exact next RB
+gate is supervised read-only LEVEL 1; no live CLI or automatic motion exists.
 
-## Phase 3 — Mech-Eye / 3D Vision Lab (`PLANNED`)
+## Phase 3 — Mech-Eye / 3D Vision Lab (`NEXT`)
 
 Official SDK adapter in its own optional environment; acquisition contracts;
 depth/point clouds; calibration; ROI; normals; generic pose, registration, and

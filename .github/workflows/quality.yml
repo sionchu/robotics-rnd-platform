@@ -23,6 +23,10 @@ jobs:
       - run: python -m pytest
       - run: python -m experiments.vision.run_all all --verify-only
       - run: python -m experiments.vision.pi_edge verify-preparation
+      - run: python -m experiments.robot.run_all verify
+      - run: python -m robotics_rnd.rb mock-demo
+      - run: python -m robotics_rnd.rb fault-demo
+      - run: python scripts/verify_v03_release.py
 
   cpp:
     runs-on: ubuntu-24.04
