@@ -10,6 +10,9 @@ FORBIDDEN_ROOTS = {
     "rclpy",
     "rospy",
     "RPi",
+    "libcamera",
+    "picamera2",
+    "rpicam",
     "Jetson",
     "cuda",
     "pycuda",
@@ -42,6 +45,16 @@ def test_vendor_import_names_are_confined_to_driver_tree() -> None:
         if "drivers" in path.parts:
             continue
         text = path.read_text(encoding="utf-8")
-        if "import rbpodo" in text or "from mecheye" in text:
+        if any(
+            marker in text
+            for marker in (
+                "import rbpodo",
+                "from mecheye",
+                "import picamera2",
+                "from picamera2",
+                "import libcamera",
+                "from libcamera",
+            )
+        ):
             violations.append(str(path))
     assert violations == []
