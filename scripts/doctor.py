@@ -10,6 +10,7 @@ import platform
 import shutil
 import subprocess
 import sys
+from ctypes.util import find_library
 from pathlib import Path
 from typing import Any
 
@@ -66,6 +67,93 @@ def package_status(name: str) -> str:
     return "available" if importlib.util.find_spec(name) is not None else "missing"
 
 
+def _read_text(path: Path) -> str | None:
+    try:
+        return path.read_text(encoding="utf-8").strip()
+    except OSError:
+        return None
+
+
+def nvidia_hardware(
+    proc_gpu_root: Path = Path("/proc/driver/nvidia/gpus"),
+    pci_root: Path = Path("/sys/bus/pci/devices"),
+) -> dict[str, Any]:
+    """Report NVIDIA display devices without exposing UUIDs or serial-like values."""
+
+    devices: list[dict[str, str]] = []
+    if proc_gpu_root.is_dir():
+        for information in sorted(proc_gpu_root.glob("*/information")):
+            fields: dict[str, str] = {}
+            text = _read_text(information) or ""
+            for line in text.splitlines():
+                if ":" in line:
+                    key, value = line.split(":", 1)
+                    fields[key.strip()] = value.strip()
+            bus = fields.get("Bus Location", information.parent.name)
+            sys_device = pci_root / bus
+            driver_link = sys_device / "driver"
+            driver = driver_link.resolve().name if driver_link.exists() else "unbound"
+            devices.append(
+                {
+                    "model": fields.get("Model", "NVIDIA GPU"),
+                    "pci_address": bus,
+                    "kernel_driver": driver,
+                    "runtime_power": _read_text(sys_device / "power/runtime_status") or "unknown",
+                }
+            )
+    elif pci_root.is_dir():
+        for device in sorted(pci_root.iterdir()):
+            vendor = _read_text(device / "vendor")
+            device_class = _read_text(device / "class")
+            if vendor != "0x10de" or not (device_class or "").startswith("0x03"):
+                continue
+            driver_link = device / "driver"
+            driver = driver_link.resolve().name if driver_link.exists() else "unbound"
+            devices.append(
+                {
+                    "model": "NVIDIA GPU",
+                    "pci_address": device.name,
+                    "kernel_driver": driver,
+                    "runtime_power": _read_text(device / "power/runtime_status") or "unknown",
+                }
+            )
+    return {
+        "status": "detected" if devices else "missing",
+        "devices": devices,
+    }
+
+
+def nvidia_driver_status(hardware: dict[str, Any], dev_root: Path = Path("/dev")) -> dict[str, Any]:
+    devices = hardware.get("devices", [])
+    bound = bool(devices) and all(device.get("kernel_driver") == "nvidia" for device in devices)
+    control_node = (dev_root / "nvidiactl").exists()
+    gpu_nodes = sorted(path.name for path in dev_root.glob("nvidia[0-9]*"))
+    usable = bound and control_node and bool(gpu_nodes)
+    if usable:
+        detail = "NVIDIA kernel binding and character devices are available"
+    elif bound:
+        detail = "NVIDIA kernel binding is present but required character devices are unavailable"
+    elif devices:
+        detail = "NVIDIA display hardware is present but is not bound to the nvidia kernel driver"
+    else:
+        detail = "No NVIDIA display hardware was detected"
+    return {
+        "status": "usable" if usable else "unusable",
+        "kernel_bound": bound,
+        "control_node": control_node,
+        "gpu_nodes": gpu_nodes,
+        "detail": detail,
+    }
+
+
+def shared_library_status(name: str) -> dict[str, str]:
+    library = find_library(name)
+    return {
+        "status": "visible" if library else "missing",
+        "detail": library or f"{name} library not found",
+    }
+
+
 def ros_status(prefixes: list[str]) -> dict[str, Any]:
     command = first_line(run(["ros2", "--help"]))
     sourced: dict[str, Any] | None = None
@@ -80,6 +168,7 @@ def report() -> dict[str, Any]:
     identity_name = run(["git", "config", "--get", "user.name"])
     identity_email = run(["git", "config", "--get", "user.email"])
     ros_prefixes = sorted(str(path) for path in Path("/opt/ros").glob("*") if path.is_dir())
+    hardware = nvidia_hardware()
     return {
         "os": os_release(),
         "architecture": platform.machine(),
@@ -100,10 +189,13 @@ def report() -> dict[str, Any]:
         "compiler": first_line(run(["g++", "--version"])),
         "cmake": first_line(run(["cmake", "--version"])),
         "ninja": first_line(run(["ninja", "--version"])),
-        "nvidia": run(
+        "nvidia_gpu": hardware,
+        "nvidia_driver": nvidia_driver_status(hardware),
+        "nvidia_smi": run(
             ["nvidia-smi", "--query-gpu=name,driver_version,memory.total", "--format=csv,noheader"]
         ),
-        "cuda": run(["nvcc", "--version"]),
+        "cuda_runtime": shared_library_status("cuda"),
+        "cuda_toolkit": run(["nvcc", "--version"]),
         "ros2": ros_status(ros_prefixes),
         "docker": first_line(run(["docker", "--version"])),
         "github_cli": first_line(run(["gh", "--version"])),
