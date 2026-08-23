@@ -29,7 +29,7 @@ def test_core_has_no_vendor_framework_or_gpu_imports() -> None:
     for path in core.rglob("*.py"):
         tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
         for node in ast.walk(tree):
-            if isinstance(node, (ast.Import, ast.ImportFrom)) and imported_root(node) in FORBIDDEN_ROOTS:
+            if isinstance(node, ast.Import | ast.ImportFrom) and imported_root(node) in FORBIDDEN_ROOTS:
                 violations.append(f"{path}:{node.lineno}:{imported_root(node)}")
     assert violations == []
 
