@@ -17,8 +17,19 @@ from typing import Any
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 
+def resolve_executable(name: str) -> str | None:
+    executable = shutil.which(name)
+    if executable is not None:
+        return executable
+    if platform.system() == "Linux" and name == "nvidia-smi":
+        wsl_nvidia_smi = Path("/usr/lib/wsl/lib/nvidia-smi")
+        if wsl_nvidia_smi.is_file():
+            return str(wsl_nvidia_smi)
+    return None
+
+
 def run(command: list[str], timeout: float = 10.0) -> dict[str, Any]:
-    executable = shutil.which(command[0])
+    executable = resolve_executable(command[0])
     if executable is None:
         return {"status": "MISSING", "detail": f"{command[0]} not found"}
     try:
