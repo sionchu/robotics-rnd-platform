@@ -51,8 +51,12 @@ command_finding Ninja "$NINJA_BIN" "$NINJA_BIN" --version
 command_finding Git git git --version
 command_finding Docker docker docker --version
 
-if command -v nvidia-smi >/dev/null 2>&1; then
-  gpu="$(nvidia-smi --query-gpu=name,memory.total,driver_version --format=csv,noheader 2>&1 | head -n 1)"
+NVIDIA_SMI="$(command -v nvidia-smi 2>/dev/null || true)"
+if [[ -z "$NVIDIA_SMI" && -x /usr/lib/wsl/lib/nvidia-smi ]]; then
+  NVIDIA_SMI=/usr/lib/wsl/lib/nvidia-smi
+fi
+if [[ -n "$NVIDIA_SMI" ]]; then
+  gpu="$("$NVIDIA_SMI" --query-gpu=name,memory.total,driver_version --format=csv,noheader 2>&1 | head -n 1)"
   if [[ -n "$gpu" ]]; then
     finding PASS NVIDIA "$gpu"
   else

@@ -146,3 +146,82 @@
 - The calibration, detection, pose, transform, and sensitivity evidence is synthetic. Lens behavior, exposure, motion blur, rolling shutter, print/target tolerances, focus, camera timing, and real device frames remain unmeasured.
 - No live camera, physical AprilTag, robot, Mech-Eye, Mech-Vision, ROS graph, vendor SDK, or safety-critical motion was used.
 - The next research cycle should validate the same acceptance metrics with a live camera and measured target before integrating robot motion or vendor-specific 3D vision.
+
+## 2026-08-24 — Windows/WSL2 dual-workstation integration
+
+### Repository and integration checkpoint
+
+- Located the existing private GitHub repository created by the Ubuntu setup and
+  used it as the only canonical remote.
+- Cloned to `C:\dev` for Windows and to the WSL2 Linux filesystem; did not reuse
+  the empty OneDrive working folder as a second repository.
+- Created `win/bootstrap-desktop` from the then-current `main`. When Ubuntu
+  advanced `main` to the v0.2 vision-foundation tag during the task, fetched it,
+  rebased the Windows work, and resolved the CI, roadmap, package, CUDA resource,
+  and architecture-test overlaps while preserving both sets of changes.
+- Pushed only the task branch. `origin/main` was not rewritten or force-pushed.
+
+### Windows and WSL2 platform work
+
+- Added conservative Windows and WSL2 bootstrap/doctor scripts, example
+  workstation profiles, cross-platform line-ending policy, data-root layout,
+  storage/IP policy, sync guidance, capability matrix, and CI coverage.
+- Added a bounded PyTorch CUDA matrix-multiply smoke experiment and a
+  vendor-neutral OpenUSD robot/camera stage generator.
+- Added Windows Isaac Sim readiness inspection with explicit RTX 4070 Ti memory
+  constraints and no automatic Isaac, driver, or system CUDA installation.
+- Added OpenUSD, PyTorch/CUDA, Isaac, and workstation learning/resource indexes.
+- Expanded the core import boundary and made Ubuntu's synthetic NVIDIA doctor
+  fixtures portable to Windows filesystems.
+- Updated WSL GPU discovery to recognize the standard
+  `/usr/lib/wsl/lib/nvidia-smi` location.
+
+### Environment findings and installs
+
+- Windows 11 desktop: Intel Core i5-13600KF, 31.85 GiB RAM, RTX 4070 Ti with
+  12,282 MiB VRAM, NVIDIA driver 591.86, and driver CUDA ceiling 13.1.
+- Windows tools used: Git 2.48.1, GitHub CLI 2.96.0, Visual Studio Build Tools
+  2022/MSVC 19.44, CMake 4.1.1, Ninja 1.13.2, and Python 3.12.10.
+- WSL2: Ubuntu 24.04.3, Python 3.12.3, GCC/G++ 13.3, CMake 3.28.3,
+  Ninja 1.13.0, and Git 2.43.0.
+- Created repository `.venv` environments and installed development, vision,
+  OpenUSD 26.8, and PyTorch 2.12.1+cu130 dependencies. WSL packages remained
+  user/repository scoped after non-interactive `sudo` was found unavailable.
+- Did not install or change NVIDIA drivers, system CUDA Toolkit, Docker, Blender,
+  ROS, vendor SDKs, firmware, security settings, or GitHub repository settings.
+
+### Verification performed
+
+- Windows Python suite: `49 passed in 1.75s`; WSL2 Python suite:
+  `49 passed in 1.26s`.
+- Ruff lint and format checks passed; Mypy reported no issues in 69 source files;
+  every pre-commit hook passed on both Windows and WSL2.
+- All five deterministic vision research acceptance groups passed in both
+  environments.
+- Windows MSVC C++ build and WSL2 GNU/Ninja C++ build passed; CTest was 1/1 in
+  both environments.
+- The deterministic mock guidance application completed on Windows with
+  `hardware_validated: false`.
+- Windows and WSL2 PyTorch CUDA smoke tests used the same 512×512 FP32 workload
+  for 10 iterations on compute capability 8.9. Both produced checksum
+  `7.302420616149902`, reported CUDA runtime 13.0, and passed.
+- OpenUSD 26.8 created a generic robot/camera USDA stage with default primitive
+  `/World`, meters-per-unit 1, and Z-up in the external Windows and WSL2 data
+  roots.
+- Isaac Sim 6.0.1 was already installed. Its packaged compatibility checker
+  exited successfully, but the 12 GB-class GPU is below NVIDIA's published
+  16 GB minimum and no scene workload was launched.
+
+### Data, IP, and limitations
+
+- Created external data-root directories for datasets, models, recordings, USD,
+  synthetic outputs, benchmarks, exports, and caches. Generated reports and
+  stages remain ignored and outside source control.
+- No company repository, private dataset, model weight, recording, calibration,
+  credential, device identifier, network address, vendor binary, or proprietary
+  SDK source was committed.
+- Physical cameras, robots, vendor cameras, ROS graphs, Isaac scenes, TensorRT,
+  Docker, and `nvcc` builds remain outside this checkpoint.
+- Next task: run an identical core/vision replay parity cycle at one commit on
+  Ubuntu, Windows, and WSL2, then define the first vendor-neutral robot/camera USD
+  replay mapping from those measured results.

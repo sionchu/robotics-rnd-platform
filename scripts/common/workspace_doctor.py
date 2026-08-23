@@ -19,6 +19,10 @@ def resolve_executable(name: str) -> str | None:
     executable = shutil.which(name)
     if executable is not None:
         return executable
+    if platform.system() == "Linux" and name == "nvidia-smi":
+        wsl_nvidia_smi = Path("/usr/lib/wsl/lib/nvidia-smi")
+        if wsl_nvidia_smi.is_file():
+            return str(wsl_nvidia_smi)
     if platform.system() == "Windows" and name == "ninja":
         local_app_data = os.environ.get("LOCALAPPDATA")
         if local_app_data:
