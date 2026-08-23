@@ -1,0 +1,20 @@
+{
+  "board": {
+    "columns": 9,
+    "rows": 6,
+    "square_size_m": 0.03
+  },
+  "ground_truth": {
+    "distortion": [-0.08, 0.03, 0.0005, -0.0003, 0.0],
+    "intrinsics_px": {
+      "cx": 640.0,
+      "cy": 360.0,
+      "fx": 920.0,
+      "fy": 915.0
+    }
+  },
+  "image_size_px": [1280, 720],
+  "pixel_noise_std_px": 0.15,
+  "seed": 20260823,
+  "views": 28
+}

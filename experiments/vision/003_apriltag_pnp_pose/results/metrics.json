@@ -1,0 +1,55 @@
+{
+  "acceptance": {
+    "exact_cases_near_numerical_precision": true,
+    "transform_direction_is_T_camera_tag": true
+  },
+  "exact_corner_cases": [
+    {
+      "case": "front_facing",
+      "mean_reprojection_error_px": 6.036532995657673e-09,
+      "orientation_error_deg": 0.0,
+      "relative_translation_error_percent": 6.203024205397867e-09,
+      "selected_method": "ITERATIVE",
+      "transform": "T_camera_tag",
+      "translation_error_m": 4.9624193643182934e-11
+    },
+    {
+      "case": "translated",
+      "mean_reprojection_error_px": 8.861985602237311e-14,
+      "orientation_error_deg": 0.0,
+      "relative_translation_error_percent": 4.9071314747733405e-14,
+      "selected_method": "IPPE_SQUARE",
+      "transform": "T_camera_tag",
+      "translation_error_m": 4.465220011294948e-16
+    },
+    {
+      "case": "rotated",
+      "mean_reprojection_error_px": 4.263256414560601e-14,
+      "orientation_error_deg": 0.0,
+      "relative_translation_error_percent": 1.4915285651279835e-14,
+      "selected_method": "IPPE_SQUARE",
+      "transform": "T_camera_tag",
+      "translation_error_m": 1.1199383359284507e-16
+    },
+    {
+      "case": "far",
+      "mean_reprojection_error_px": 0.0,
+      "orientation_error_deg": 0.0,
+      "relative_translation_error_percent": 4.1676603373487734e-14,
+      "selected_method": "IPPE_SQUARE",
+      "transform": "T_camera_tag",
+      "translation_error_m": 6.683347232876724e-16
+    }
+  ],
+  "experiment": "003_apriltag_pnp_pose",
+  "raster_detection_case": {
+    "mean_reprojection_error_px": 0.2942471158485561,
+    "orientation_error_deg": 1.1333121465107794,
+    "relative_translation_error_percent": 0.6302963421603377,
+    "translation_error_m": 0.0050474892971126934
+  },
+  "requested_default": "IPPE_SQUARE",
+  "synthetic_only": true,
+  "tag_size_m": 0.12,
+  "transform_convention": "T_camera_tag maps tag coordinates into camera"
+}

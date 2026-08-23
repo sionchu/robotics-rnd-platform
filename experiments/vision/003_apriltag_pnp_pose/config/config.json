@@ -1,0 +1,9 @@
+{
+  "camera_frame": "camera",
+  "default_method": "SOLVEPNP_IPPE_SQUARE",
+  "fallback": "SOLVEPNP_ITERATIVE when best IPPE mean reprojection exceeds 5 px",
+  "image_size_px": [1280, 720],
+  "tag_frame": "tag",
+  "tag_size_m": 0.12,
+  "transform": "T_camera_tag"
+}

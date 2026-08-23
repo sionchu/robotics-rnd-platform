@@ -59,3 +59,6 @@ vendor_sdk/
 # Experiment outputs (documentation stays tracked)
 experiments/**/results/*
 !experiments/**/results/README.md
+!experiments/**/results/*.json
+!experiments/**/results/*.csv
+!experiments/**/results/*.md

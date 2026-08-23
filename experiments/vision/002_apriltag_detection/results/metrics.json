@@ -1,0 +1,109 @@
+{
+  "acceptance": {
+    "all_expected_tags_detected": true
+  },
+  "benchmark": {
+    "accuracy_metrics": {
+      "mean_corner_rmse_px": 0.4185080146971348
+    },
+    "algorithm": "OpenCV ArucoDetector AprilTag 36h11",
+    "cpu": "AMD Ryzen AI 7 350",
+    "fps": 231.14233895815389,
+    "gpu": null,
+    "host": "ubuntu-workstation-anonymized",
+    "image_resolution": {
+      "height_px": 720,
+      "width_px": 1280
+    },
+    "latency_ms": 4.326338499936355,
+    "memory_mb": null,
+    "software_versions": {
+      "opencv": "4.14.0",
+      "robotics_rnd": "0.2.0"
+    },
+    "source_type": "synthetic grayscale PNG",
+    "success_rate": 1.0
+  },
+  "corner_order": "top-left,top-right,bottom-right,bottom-left",
+  "dependency": "opencv-python-headless",
+  "dependency_version": "4.14.0",
+  "detection_success_rate": 1.0,
+  "experiment": "002_apriltag_detection",
+  "family": "tag36h11",
+  "scenarios": [
+    {
+      "blur_sigma_px": 0.0,
+      "corner_rmse_px": 0.32982059151377013,
+      "correct_id": true,
+      "detected": true,
+      "detections": 1,
+      "image_noise_std": 0.0,
+      "scenario": "baseline"
+    },
+    {
+      "blur_sigma_px": 0.0,
+      "corner_rmse_px": 0.4137345256093722,
+      "correct_id": true,
+      "detected": true,
+      "detections": 1,
+      "image_noise_std": 0.0,
+      "scenario": "small"
+    },
+    {
+      "blur_sigma_px": 0.0,
+      "corner_rmse_px": 0.33577945802688514,
+      "correct_id": true,
+      "detected": true,
+      "detections": 1,
+      "image_noise_std": 0.0,
+      "scenario": "translated"
+    },
+    {
+      "blur_sigma_px": 0.0,
+      "corner_rmse_px": 0.27980752229698214,
+      "correct_id": true,
+      "detected": true,
+      "detections": 1,
+      "image_noise_std": 0.0,
+      "scenario": "rotated"
+    },
+    {
+      "blur_sigma_px": 0.0,
+      "corner_rmse_px": 0.27610328410481544,
+      "correct_id": true,
+      "detected": true,
+      "detections": 1,
+      "image_noise_std": 0.0,
+      "scenario": "perspective"
+    },
+    {
+      "blur_sigma_px": 2.0,
+      "corner_rmse_px": 0.7969753001956758,
+      "correct_id": true,
+      "detected": true,
+      "detections": 1,
+      "image_noise_std": 0.0,
+      "scenario": "blur"
+    },
+    {
+      "blur_sigma_px": 0.0,
+      "corner_rmse_px": 0.2790254148564837,
+      "correct_id": true,
+      "detected": true,
+      "detections": 1,
+      "image_noise_std": 10.0,
+      "scenario": "noise"
+    },
+    {
+      "blur_sigma_px": 2.0,
+      "corner_rmse_px": 0.6368180209730939,
+      "correct_id": true,
+      "detected": true,
+      "detections": 1,
+      "image_noise_std": 8.0,
+      "scenario": "blur_noise"
+    }
+  ],
+  "seed": 20260823,
+  "synthetic_only": true
+}

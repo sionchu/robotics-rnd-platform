@@ -1,0 +1,18 @@
+{
+  "dependency": "opencv-python-headless==4.14.0.94",
+  "family": "tag36h11",
+  "image_size_px": [1280, 720],
+  "seed": 20260823,
+  "tag_id": 7,
+  "tag_size_m": 0.12,
+  "variations": [
+    "baseline",
+    "small",
+    "translated",
+    "rotated",
+    "perspective",
+    "blur",
+    "noise",
+    "blur_noise"
+  ]
+}

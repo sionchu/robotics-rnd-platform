@@ -1,0 +1,6 @@
+{
+  "cases": 100,
+  "composition": "T_base_camera @ T_camera_tag = T_base_tag",
+  "matrix_tolerance": 1e-12,
+  "seed": 20260823
+}

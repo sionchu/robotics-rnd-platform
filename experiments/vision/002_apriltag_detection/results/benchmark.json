@@ -1,0 +1,22 @@
+{
+  "accuracy_metrics": {
+    "mean_corner_rmse_px": 0.4185080146971348
+  },
+  "algorithm": "OpenCV ArucoDetector AprilTag 36h11",
+  "cpu": "AMD Ryzen AI 7 350",
+  "fps": 231.14233895815389,
+  "gpu": null,
+  "host": "ubuntu-workstation-anonymized",
+  "image_resolution": {
+    "height_px": 720,
+    "width_px": 1280
+  },
+  "latency_ms": 4.326338499936355,
+  "memory_mb": null,
+  "software_versions": {
+    "opencv": "4.14.0",
+    "robotics_rnd": "0.2.0"
+  },
+  "source_type": "synthetic grayscale PNG",
+  "success_rate": 1.0
+}

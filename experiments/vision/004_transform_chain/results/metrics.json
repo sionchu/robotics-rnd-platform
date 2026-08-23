@@ -1,0 +1,15 @@
+{
+  "acceptance": {
+    "composition_below_1e_12": true,
+    "inverse_recovery_below_1e_12": true,
+    "reversed_composition_rejected": true
+  },
+  "cases": 100,
+  "composition": "T_base_camera @ T_camera_tag = T_base_tag",
+  "experiment": "004_transform_chain",
+  "max_composition_matrix_error": 8.326672684688674e-16,
+  "max_inverse_recovery_matrix_error": 8.881784197001252e-16,
+  "reversed_composition_rejected": true,
+  "seed": 20260823,
+  "synthetic_only": true
+}
