@@ -1,0 +1,21 @@
+{
+  "experiment": "006_pi_camera_bringup",
+  "capture_format": "BGR888",
+  "capture_frames": 100,
+  "camera_index": 0,
+  "minimum_warmup_frames": 20,
+  "required_detected_values": [
+    "board_model",
+    "architecture",
+    "os",
+    "kernel",
+    "camera_sensor",
+    "camera_modes",
+    "picamera2",
+    "rpicam_apps",
+    "opencv"
+  ],
+  "sensor": null,
+  "selected_mode": null,
+  "resolution": null
+}

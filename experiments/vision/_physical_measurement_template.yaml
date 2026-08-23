@@ -1,0 +1,16 @@
+schema: robotics-rnd-physical-measurement-v1
+session_id: REQUIRED_NEUTRAL_SESSION_ID
+reference_type: REQUIRED
+ground_truth_class: REQUIRED
+measurement_tool: REQUIRED
+measurement_resolution: REQUIRED_WITH_UNIT
+estimated_uncertainty: REQUIRED_WITH_UNIT
+tag_size_measured_m: null
+distance_m: null
+distance_uncertainty_m: null
+angle_deg_nominal: null
+angle_uncertainty_deg: null
+camera_reference_point: REQUIRED
+mounting_notes: REQUIRED
+lighting_notes: REQUIRED
+operator_notes: "Do not enter a name, address, employer, or other personal identifier."

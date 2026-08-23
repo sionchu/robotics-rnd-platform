@@ -1,0 +1,9 @@
+{
+  "schema": "robotics-rnd-hardware-experiment-status-v1",
+  "experiment": "007_pi_camera_calibration",
+  "status": "NOT_RUN_HARDWARE_UNAVAILABLE",
+  "hardware_validated": false,
+  "ground_truth_class": "MEASURED_PHYSICAL_REFERENCE",
+  "measurements": null,
+  "decision": "CONTINUE_RESEARCH"
+}

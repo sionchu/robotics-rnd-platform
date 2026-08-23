@@ -22,6 +22,7 @@ jobs:
       - run: python -m mypy
       - run: python -m pytest
       - run: python -m experiments.vision.run_all all --verify-only
+      - run: python -m experiments.vision.pi_edge verify-preparation
 
   cpp:
     runs-on: ubuntu-24.04

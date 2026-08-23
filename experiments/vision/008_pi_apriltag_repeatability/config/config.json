@@ -1,0 +1,17 @@
+{
+  "experiment": "008_pi_apriltag_repeatability",
+  "family": "tag36h11",
+  "tag_id": 7,
+  "tag_size_measured_m": null,
+  "frames": 200,
+  "control_mode": "CONTROLLED_IF_SUPPORTED",
+  "required_metrics": [
+    "detection_success_rate",
+    "translation_rms_jitter_m",
+    "orientation_std_deviation_deg",
+    "corner_rms_jitter_px",
+    "mean_reprojection_error_px",
+    "frame_interval_mean_ms",
+    "frame_interval_std_ms"
+  ]
+}
