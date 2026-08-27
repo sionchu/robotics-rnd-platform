@@ -59,7 +59,7 @@ def memory() -> dict[str, Any]:
         page_size = os.sysconf("SC_PAGE_SIZE")
         pages = os.sysconf("SC_PHYS_PAGES")
         return {"total_gib": round(page_size * pages / (1024**3), 2)}
-    except (OSError, ValueError):
+    except (AttributeError, OSError, ValueError):
         return {"status": "unknown"}
 
 

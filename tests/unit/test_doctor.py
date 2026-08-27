@@ -1,22 +1,34 @@
+import os
+import subprocess
 from pathlib import Path
 
 from scripts.doctor import nvidia_driver_status, nvidia_hardware
 
 
 def write_gpu_fixture(root: Path) -> tuple[Path, Path]:
-    proc_root = root / "proc" / "0000:04:00.0"
+    bus_id = "pci-test-0000-04-00-0"
+    proc_root = root / "proc" / bus_id
     proc_root.mkdir(parents=True)
     (proc_root / "information").write_text(
-        "Model: NVIDIA Test GPU\nGPU UUID: GPU-private-value-must-not-leak\nBus Location: 0000:04:00.0\n",
+        f"Model: NVIDIA Test GPU\nGPU UUID: GPU-private-value-must-not-leak\nBus Location: {bus_id}\n",
         encoding="utf-8",
     )
     pci_root = root / "pci"
-    device = pci_root / "0000:04:00.0"
+    device = pci_root / bus_id
     (device / "power").mkdir(parents=True)
     (device / "power" / "runtime_status").write_text("active\n", encoding="utf-8")
     driver = root / "drivers" / "nvidia"
     driver.mkdir(parents=True)
-    (device / "driver").symlink_to(driver, target_is_directory=True)
+    driver_link = device / "driver"
+    if os.name == "nt":
+        subprocess.run(
+            ["cmd.exe", "/c", "mklink", "/J", str(driver_link), str(driver)],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+    else:
+        driver_link.symlink_to(driver, target_is_directory=True)
     return proc_root.parent, pci_root
 
 
@@ -28,7 +40,7 @@ def test_nvidia_hardware_reports_safe_evidence_without_uuid(tmp_path: Path) -> N
     assert result["devices"] == [
         {
             "model": "NVIDIA Test GPU",
-            "pci_address": "0000:04:00.0",
+            "pci_address": "pci-test-0000-04-00-0",
             "kernel_driver": "nvidia",
             "runtime_power": "active",
         }

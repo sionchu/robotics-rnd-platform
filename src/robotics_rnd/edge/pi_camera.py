@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import argparse
+import importlib
 import json
 import platform
-import resource
 import shutil
 import sys
 from dataclasses import replace
@@ -47,6 +47,18 @@ from robotics_rnd.vision.edge_analysis import (
     compare_pose_runs,
 )
 from robotics_rnd.vision.pose import solve_apriltag_pnp
+
+
+def _peak_memory_mb() -> float | None:
+    try:
+        resource = importlib.import_module("resource")
+        getrusage = resource.__dict__.get("getrusage")
+        rusage_self = resource.__dict__.get("RUSAGE_SELF")
+        if getrusage is None or rusage_self is None:
+            return None
+        return float(getrusage(rusage_self).ru_maxrss) / 1_024.0
+    except (ImportError, AttributeError):
+        return None
 
 
 def _write_json(path: Path, document: Any) -> None:
@@ -399,7 +411,7 @@ def benchmark(arguments: argparse.Namespace) -> dict[str, Any]:
     latency = float(document["processing_latency_ms"]["mean"])
     detections = sum(bool(sample["detected"]) for sample in document["samples"])
     frame_count = len(document["samples"])
-    peak_memory_mb = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1_024.0
+    peak_memory_mb = _peak_memory_mb()
     result = VisionBenchmarkResult(
         host=arguments.host_label,
         cpu=arguments.cpu_label,
