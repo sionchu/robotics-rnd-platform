@@ -14,6 +14,7 @@ from typing import Any
 import gymnasium as gym
 import isaaclab.sim as sim_utils
 from isaaclab.assets import ArticulationCfg, AssetBaseCfg
+from isaaclab.assets.rigid_object import RigidObjectCfg
 from isaaclab.controllers.differential_ik_cfg import DifferentialIKControllerCfg
 from isaaclab.envs import ManagerBasedRLEnvCfg
 from isaaclab.envs.mdp.actions.actions_cfg import DifferentialInverseKinematicsActionCfg
@@ -31,8 +32,8 @@ from isaaclab_assets.robots.universal_robots import UR10e_CFG
 from isaaclab_physx.physics import PhysxCfg
 from isaaclab_rl.rsl_rl import RslRlMLPModelCfg, RslRlOnPolicyRunnerCfg, RslRlPpoAlgorithmCfg
 
-TASK_ID = "Isaac-UR10e-PegInsert-Learning-v0"
-PLAY_TASK_ID = "Isaac-UR10e-PegInsert-Learning-Play-v0"
+TASK_ID = "Isaac-UR10e-PegInsert-Learning-v1"
+PLAY_TASK_ID = "Isaac-UR10e-PegInsert-Learning-Play-v1"
 RUNTIME_MODULE = "experiments.robot.018_ur10e_peg_in_hole.learning_lab"
 
 # Geometry is deliberately primitive and dimensioned in SI units.  The XY
@@ -44,7 +45,10 @@ WALL_THICKNESS = 0.02
 HOLE_BOTTOM_Z = 0.02
 HOLE_TOP_Z = 0.3061152
 HOLE_DEPTH = HOLE_TOP_Z - HOLE_BOTTOM_Z
-HOLE_CENTER_POS = (-0.6433276, -0.1740356, 0.0)
+PLATE_CENTER_POS = (-0.6433276, -0.1740356, 0.0)
+PLATE_SIZE = (0.44, 0.34, 0.04)
+HOLE_OFFSET_X_RANGE_M = (-0.04, 0.04)
+HOLE_OFFSET_Y_RANGE_M = (-0.03, 0.03)
 
 ACTION_SCALE_M = 0.005
 RESET_XY_OFFSET_M = 0.015
@@ -135,6 +139,28 @@ def _static_box(
     )
 
 
+def _kinematic_box(
+    prim_path: str,
+    size: tuple[float, float, float],
+    pos: tuple[float, float, float],
+    color: tuple[float, float, float],
+    *,
+    collidable: bool,
+) -> RigidObjectCfg:
+    """Return a kinematic primitive that can be repositioned per environment."""
+
+    return RigidObjectCfg(
+        prim_path=prim_path,
+        init_state=RigidObjectCfg.InitialStateCfg(pos=pos),
+        spawn=sim_utils.CuboidCfg(
+            size=size,
+            rigid_props=sim_utils.RigidBodyPropertiesCfg(kinematic_enabled=True, disable_gravity=True),
+            collision_props=CollisionPropertiesCfg(collision_enabled=collidable),
+            visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=color, roughness=0.65),
+        ),
+    )
+
+
 # Do not mutate the imported upstream configuration.  ``configclass.copy`` is
 # shallow, so a deepcopy is used before enabling contact reporting for this
 # external task.
@@ -159,38 +185,38 @@ class SceneCfg(InteractiveSceneCfg):
 
     robot: ArticulationCfg = UR10E_LEARNING_CFG
 
-    fixture_base = _static_box(
-        "{ENV_REGEX_NS}/Fixture/Base",
-        (_FIXTURE_SIZE, _FIXTURE_SIZE, 0.04),
-        (HOLE_CENTER_POS[0], HOLE_CENTER_POS[1], 0.0),
+    plate = _static_box(
+        "{ENV_REGEX_NS}/Plate",
+        PLATE_SIZE,
+        PLATE_CENTER_POS,
         (0.24, 0.27, 0.32),
         collidable=True,
     )
-    wall_x_neg = _static_box(
+    wall_x_neg = _kinematic_box(
         "{ENV_REGEX_NS}/Fixture/HoleWallXNeg",
         (WALL_THICKNESS, _FIXTURE_SIZE, HOLE_DEPTH),
-        (HOLE_CENTER_POS[0] - _WALL_OFFSET, HOLE_CENTER_POS[1], _WALL_Z),
+        (PLATE_CENTER_POS[0] - _WALL_OFFSET, PLATE_CENTER_POS[1], _WALL_Z),
         (0.32, 0.36, 0.42),
         collidable=True,
     )
-    wall_x_pos = _static_box(
+    wall_x_pos = _kinematic_box(
         "{ENV_REGEX_NS}/Fixture/HoleWallXPos",
         (WALL_THICKNESS, _FIXTURE_SIZE, HOLE_DEPTH),
-        (HOLE_CENTER_POS[0] + _WALL_OFFSET, HOLE_CENTER_POS[1], _WALL_Z),
+        (PLATE_CENTER_POS[0] + _WALL_OFFSET, PLATE_CENTER_POS[1], _WALL_Z),
         (0.32, 0.36, 0.42),
         collidable=True,
     )
-    wall_y_neg = _static_box(
+    wall_y_neg = _kinematic_box(
         "{ENV_REGEX_NS}/Fixture/HoleWallYNeg",
         (HOLE_INNER, WALL_THICKNESS, HOLE_DEPTH),
-        (HOLE_CENTER_POS[0], HOLE_CENTER_POS[1] - _WALL_OFFSET, _WALL_Z),
+        (PLATE_CENTER_POS[0], PLATE_CENTER_POS[1] - _WALL_OFFSET, _WALL_Z),
         (0.32, 0.36, 0.42),
         collidable=True,
     )
-    wall_y_pos = _static_box(
+    wall_y_pos = _kinematic_box(
         "{ENV_REGEX_NS}/Fixture/HoleWallYPos",
         (HOLE_INNER, WALL_THICKNESS, HOLE_DEPTH),
-        (HOLE_CENTER_POS[0], HOLE_CENTER_POS[1] + _WALL_OFFSET, _WALL_Z),
+        (PLATE_CENTER_POS[0], PLATE_CENTER_POS[1] + _WALL_OFFSET, _WALL_Z),
         (0.32, 0.36, 0.42),
         collidable=True,
     )
@@ -214,17 +240,17 @@ class SceneCfg(InteractiveSceneCfg):
         collidable=False,
     )
 
-    target_marker = _static_box(
+    target_marker = _kinematic_box(
         "{ENV_REGEX_NS}/Fixture/HoleTargetMarker",
         (0.012, 0.012, 0.012),
-        (HOLE_CENTER_POS[0], HOLE_CENTER_POS[1], HOLE_TOP_Z + 0.006),
+        (PLATE_CENTER_POS[0], PLATE_CENTER_POS[1], HOLE_TOP_Z + 0.006),
         (0.12, 0.86, 0.24),
         collidable=False,
     )
-    insertion_axis_marker = _static_box(
+    insertion_axis_marker = _kinematic_box(
         "{ENV_REGEX_NS}/Fixture/InsertionAxisMarker",
         (0.006, 0.006, HOLE_DEPTH),
-        (HOLE_CENTER_POS[0], HOLE_CENTER_POS[1], HOLE_BOTTOM_Z + HOLE_DEPTH / 2.0),
+        (PLATE_CENTER_POS[0], PLATE_CENTER_POS[1], HOLE_BOTTOM_Z + HOLE_DEPTH / 2.0),
         (0.18, 0.56, 0.95),
         collidable=False,
     )
@@ -281,7 +307,7 @@ class ObservationsCfg:
 
 @configclass
 class RewardsCfg:
-    """The three conceptual rewards used by v0."""
+    """The unchanged three conceptual rewards from v0."""
 
     alignment_progress = RewTerm(func=alignment_progress, weight=2.0)
     insertion_progress = RewTerm(func=insertion_progress, weight=3.0)
@@ -318,7 +344,7 @@ class UR10ePegInsertEnvCfg(ManagerBasedRLEnvCfg):
         self.episode_length_s = 8.0
         self.seed = 42
         self.viewer.eye = (1.25, -1.50, 1.10)
-        self.viewer.lookat = (HOLE_CENTER_POS[0], HOLE_CENTER_POS[1], 0.18)
+        self.viewer.lookat = (PLATE_CENTER_POS[0], PLATE_CENTER_POS[1], 0.18)
         self.ui_window_class_type = f"{RUNTIME_MODULE}:LearningLabWindow"
 
 

@@ -28,7 +28,7 @@ if __name__ == "__main__":
     from isaaclab.app import AppLauncher
 
     _bootstrap_parser = argparse.ArgumentParser(description="Experiment 018 UR10e peg-in-hole learning lab")
-    _bootstrap_parser.add_argument("--task", default="Isaac-UR10e-PegInsert-Learning-v0")
+    _bootstrap_parser.add_argument("--task", default="Isaac-UR10e-PegInsert-Learning-v1")
     _bootstrap_parser.add_argument("--num_envs", type=int, default=1)
     _bootstrap_parser.add_argument("--steps", type=int, default=240)
     _bootstrap_parser.add_argument(
@@ -52,10 +52,13 @@ ACTION_SCALE_M = registration.ACTION_SCALE_M
 ALIGNMENT_GATE_M = registration.ALIGNMENT_GATE_M
 APPROACH_HEIGHT_M = registration.APPROACH_HEIGHT_M
 HOLE_BOTTOM_Z = registration.HOLE_BOTTOM_Z
-HOLE_CENTER_POS = registration.HOLE_CENTER_POS
 HOLE_DEPTH = registration.HOLE_DEPTH
 HOLE_INNER = registration.HOLE_INNER
 HOLE_TOP_Z = registration.HOLE_TOP_Z
+HOLE_OFFSET_X_RANGE_M = registration.HOLE_OFFSET_X_RANGE_M
+HOLE_OFFSET_Y_RANGE_M = registration.HOLE_OFFSET_Y_RANGE_M
+PLATE_CENTER_POS = registration.PLATE_CENTER_POS
+WALL_THICKNESS = registration.WALL_THICKNESS
 PEG_LENGTH = registration.PEG_LENGTH
 PEG_WIDTH = registration.PEG_WIDTH
 PLAY_TASK_ID = registration.PLAY_TASK_ID
@@ -88,6 +91,13 @@ def _env_ids(env: Any, env_ids: Sequence[int] | torch.Tensor | slice | None) -> 
     return torch.as_tensor(list(env_ids), device=env.device, dtype=torch.long)
 
 
+def _default_hole_center_w(env: Any) -> torch.Tensor:
+    """Return the unrandomized plate-center hole frame for startup diagnostics."""
+
+    plate_center = torch.as_tensor(PLATE_CENTER_POS, device=env.device)
+    return env.scene.env_origins + plate_center
+
+
 def _runtime_task_state(env: Any) -> dict[str, torch.Tensor]:
     """Compute task frames and diagnostics from live articulation/sensor tensors."""
 
@@ -104,7 +114,9 @@ def _runtime_task_state(env: Any) -> dict[str, torch.Tensor]:
     peg_tip_pos_w = wrist_pos_w + peg_offset_w
     peg_tip_vel_w = wrist_lin_vel_w + torch.cross(wrist_ang_vel_w, peg_offset_w, dim=-1)
 
-    hole_center_w = env.scene.env_origins + torch.as_tensor(HOLE_CENTER_POS, device=env.device)
+    hole_center_w = getattr(env, "_hole_center_w", None)
+    if hole_center_w is None:
+        hole_center_w = _default_hole_center_w(env)
     peg_pos_rel_hole = peg_tip_pos_w - hole_center_w
     hole_top_z_w = hole_center_w[:, 2] + HOLE_TOP_Z
     insertion_depth = torch.clamp(hole_top_z_w - peg_tip_pos_w[:, 2], min=0.0, max=HOLE_DEPTH)
@@ -183,13 +195,43 @@ def success_bonus(env: Any) -> torch.Tensor:
     return value
 
 
+def _move_socket(env: Any, ids: torch.Tensor, hole_center_w: torch.Tensor) -> None:
+    """Move the four physical walls and both visual markers as one socket.
+
+    ``RigidObject`` root writers update PhysX state directly for the selected
+    environments.  The socket therefore follows the sampled hole frame at
+    every reset without editing USD prim transforms or relying on a stale
+    Fabric/scene cache.
+    """
+
+    wall_offset = HOLE_INNER / 2.0 + WALL_THICKNESS / 2.0
+    wall_z = HOLE_BOTTOM_Z + HOLE_DEPTH / 2.0
+    specs = (
+        ("wall_x_neg", (-wall_offset, 0.0, wall_z)),
+        ("wall_x_pos", (wall_offset, 0.0, wall_z)),
+        ("wall_y_neg", (0.0, -wall_offset, wall_z)),
+        ("wall_y_pos", (0.0, wall_offset, wall_z)),
+        ("target_marker", (0.0, 0.0, HOLE_TOP_Z + 0.006)),
+        ("insertion_axis_marker", (0.0, 0.0, HOLE_BOTTOM_Z + HOLE_DEPTH / 2.0)),
+    )
+    zero_velocity = torch.zeros((len(ids), 6), device=env.device)
+    for asset_name, local_offset in specs:
+        root_pose = torch.zeros((len(ids), 7), device=env.device)
+        root_pose[:, :3] = hole_center_w + torch.as_tensor(local_offset, device=env.device)
+        root_pose[:, 6] = 1.0
+        asset = env.scene[asset_name]
+        asset.write_root_pose_to_sim_index(root_pose=root_pose, env_ids=ids)
+        asset.write_root_velocity_to_sim_index(root_velocity=zero_velocity, env_ids=ids)
+
+
 def reset_peg_insert(env: Any, env_ids: Sequence[int] | torch.Tensor | slice) -> None:
-    """Reset above the fixture with only a small XY offset randomized.
+    """Reset above a per-environment randomized hole with a small peg offset.
 
     The nominal approach pose is solved from the official UR10e default pose
     with damped least-squares IK.  Its Z height is fixed at
-    ``HOLE_TOP_Z + APPROACH_HEIGHT_M``; only the XY target is sampled, so the
-    reset introduces no orientation, physics, or domain randomization.
+    ``HOLE_TOP_Z + APPROACH_HEIGHT_M``.  Only the socket XY and peg XY start
+    offset are sampled; orientation, Z, physics, and reward parameters stay
+    fixed.
     """
 
     # This is the upstream reset behavior for all scene entities, including
@@ -197,6 +239,19 @@ def reset_peg_insert(env: Any, env_ids: Sequence[int] | torch.Tensor | slice) ->
     # only XY; the initial orientation remains the official UR10e orientation.
     reset_scene_to_default(env, env_ids)
     ids = _env_ids(env, env_ids)
+
+    # Sample one hole offset per environment/episode, then move every socket
+    # component before solving the robot approach target.  The two ranges are
+    # intentionally conservative relative to the wide plate primitive.
+    offset_xy = torch.empty((len(ids), 2), device=env.device)
+    offset_xy[:, 0].uniform_(*HOLE_OFFSET_X_RANGE_M)
+    offset_xy[:, 1].uniform_(*HOLE_OFFSET_Y_RANGE_M)
+    env._hole_offset_xy[ids] = offset_xy
+    plate_center = torch.as_tensor(PLATE_CENTER_POS, device=env.device)
+    hole_center_w = env.scene.env_origins[ids] + plate_center
+    hole_center_w[:, :2] += offset_xy
+    env._hole_center_w[ids] = hole_center_w
+    _move_socket(env, ids, hole_center_w)
 
     # Refresh the kinematic tensors at the official default pose before the
     # projection.  ``forward`` is not a simulation step.
@@ -206,10 +261,8 @@ def reset_peg_insert(env: Any, env_ids: Sequence[int] | torch.Tensor | slice) ->
     robot = env.scene["robot"]
     default_pos = robot.data.default_joint_pos.torch[ids].clone()
     default_vel = robot.data.default_joint_vel.torch[ids].clone()
-    target_pos = env.scene.env_origins[ids].clone()
-    target_pos += torch.as_tensor(
-        (HOLE_CENTER_POS[0], HOLE_CENTER_POS[1], HOLE_TOP_Z + APPROACH_HEIGHT_M), device=env.device
-    )
+    target_pos = hole_center_w.clone()
+    target_pos[:, 2] += HOLE_TOP_Z + APPROACH_HEIGHT_M
     target_pos[:, :2] += torch.empty((len(ids), 2), device=env.device).uniform_(
         -RESET_XY_OFFSET_M, RESET_XY_OFFSET_M
     )
@@ -262,6 +315,10 @@ class LearningLabWindow:
         self.ui_window_elements = self._base_window.ui_window_elements
         self._learning_labels: dict[str, Any] = {}
         self._learning_env = env
+        # Keep the experiment panel visible on the compact native window; the
+        # upstream control/debug frames remain available and can be expanded.
+        for frame_name in ("sim_frame", "viewer_frame", "debug_frame"):
+            self.ui_window_elements[frame_name].collapsed = True
 
         with (
             self.ui_window_elements["main_vstack"],
@@ -280,6 +337,11 @@ class LearningLabWindow:
                 "UR10e / PhysX -> Reward",
             )
             self._add_label("mode", "Mode: MANUAL")
+            self._add_label(
+                "randomization",
+                "Environment: 0 | Hole X/Y: [0.00, 0.00] mm | Offset: [0.00, 0.00] mm | "
+                "Randomized each episode: YES",
+            )
             self._add_label("state", "State: waiting for reset")
             self._add_label("action", "Action: raw [0, 0, 0] | scaled [0, 0, 0] mm")
             self._add_label("reward", "Reward: alignment 0 | insertion 0 | success 0 | total 0")
@@ -303,6 +365,11 @@ class LearningLabWindow:
         try:
             state = self._learning_env.task_state_for_ui()
             self._learning_labels["mode"].text = f"Mode: {state['mode']}"
+            self._learning_labels["randomization"].text = (
+                f"Environment: {state['environment']} | Hole X/Y: [{state['hole_x_mm']:+.2f}, "
+                f"{state['hole_y_mm']:+.2f}] mm | Offset: [{state['hole_offset_x_mm']:+.2f}, "
+                f"{state['hole_offset_y_mm']:+.2f}] mm | Randomized each episode: {state['hole_randomized']}"
+            )
             self._learning_labels["state"].text = (
                 f"XY error {state['xy_error_mm']:.2f} mm | Z error {state['z_error_mm']:.2f} mm | "
                 f"insertion {state['insertion_mm']:.2f} mm | contact {state['contact_force_n']:.1f} N | "
@@ -341,6 +408,8 @@ class UR10ePegInsertEnv(ManagerBasedRLEnv):
         self._wrist_body_id: int | None = None
         self._learning_mode = "MANUAL"
         super().__init__(cfg=cfg, render_mode=render_mode, **kwargs)
+        self._hole_offset_xy = torch.zeros((self.num_envs, 2), device=self.device)
+        self._hole_center_w = _default_hole_center_w(self).clone()
         self._previous_xy_error = torch.zeros(self.num_envs, device=self.device)
         self._previous_insertion_depth = torch.zeros(self.num_envs, device=self.device)
         self._tracker_valid = torch.zeros(self.num_envs, device=self.device, dtype=torch.bool)
@@ -400,6 +469,16 @@ class UR10ePegInsertEnv(ManagerBasedRLEnv):
             }
         return {
             "mode": self._learning_mode,
+            "environment": 0,
+            "hole_x_mm": float(
+                (state["hole_center_w"][0, 0] - self.scene.env_origins[0, 0]).detach().cpu().item() * 1000.0
+            ),
+            "hole_y_mm": float(
+                (state["hole_center_w"][0, 1] - self.scene.env_origins[0, 1]).detach().cpu().item() * 1000.0
+            ),
+            "hole_offset_x_mm": float(self._hole_offset_xy[0, 0].detach().cpu().item() * 1000.0),
+            "hole_offset_y_mm": float(self._hole_offset_xy[0, 1].detach().cpu().item() * 1000.0),
+            "hole_randomized": "YES",
             "xy_error_mm": float(state["xy_error"][0].detach().cpu().item() * 1000.0),
             "z_error_mm": float(state["z_error"][0].detach().cpu().item() * 1000.0),
             "insertion_mm": float(state["insertion_depth"][0].detach().cpu().item() * 1000.0),
@@ -433,7 +512,7 @@ def _axis_probe_action(env: UR10ePegInsertEnv, step: int) -> torch.Tensor:
 
     state = _runtime_task_state(env)
     # Root orientation is fixed to the official UR10e default, so the hole
-    # frame and the robot-root frame share axes in this v0 probe.
+    # frame and the robot-root frame share axes in this v1 probe.
     action[:, :2] = torch.clamp(-state["peg_pos_rel_hole"][:, :2] / ACTION_SCALE_M * 0.50, -1.0, 1.0)
     aligned = state["xy_error"] <= ALIGNMENT_GATE_M
     action[:, 2] = torch.where(
@@ -456,6 +535,12 @@ def _run_probe(args_cli: Any, simulation_app: Any) -> None:
         env = gym.make(args_cli.task, cfg=env_cfg).unwrapped
         env.set_learning_mode(args_cli.mode)
         env.reset(seed=42)
+        success_seen = torch.zeros(env.num_envs, device=env.device, dtype=torch.bool)
+        success_count = 0
+        timeout_count = 0
+        offsets = env._hole_offset_xy.detach().cpu().tolist()
+        offsets_mm = [[round(x * 1000.0, 3) for x in pair] for pair in offsets]
+        print(f"[EXP018][reset] episode=0 offsets_mm={offsets_mm}")
 
         start = time.perf_counter()
         for step in range(args_cli.steps):
@@ -467,6 +552,9 @@ def _run_probe(args_cli: Any, simulation_app: Any) -> None:
                 else:
                     action = torch.zeros((env.num_envs, 3), device=env.device)
                 _, reward, terminated, truncated, _ = env.step(action)
+            success_seen |= terminated
+            success_count += int(terminated.sum().detach().cpu().item())
+            timeout_count += int(truncated.sum().detach().cpu().item())
             if step % 20 == 0 or bool(torch.any(terminated | truncated)):
                 state = env.task_state_for_ui()
                 print(
@@ -483,9 +571,18 @@ def _run_probe(args_cli: Any, simulation_app: Any) -> None:
                         bool(truncated[0].detach().cpu().item()),
                     )
                 )
+            if bool(torch.any(terminated | truncated)):
+                offsets = env._hole_offset_xy.detach().cpu().tolist()
+                offsets_mm = [[round(x * 1000.0, 3) for x in pair] for pair in offsets]
+                print(f"[EXP018][reset] episode_step={step} offsets_mm={offsets_mm}")
             if not simulation_app.is_running():
                 break
         print(f"[EXP018] probe_elapsed_s={time.perf_counter() - start:.3f}")
+        print(
+            f"[EXP018][probe_summary] envs={env.num_envs} success_envs="
+            f"{int(success_seen.sum().detach().cpu().item())} success_count={success_count} "
+            f"timeout_count={timeout_count} failure_count={timeout_count}"
+        )
     except BaseException as exc:
         print(f"[EXP018][error] {type(exc).__name__}: {exc}", flush=True)
         raise
