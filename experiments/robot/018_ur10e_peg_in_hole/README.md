@@ -220,6 +220,9 @@ startup reports preloaded USD modules and failed `omni.kit.usd.layers`,
 The captured log is outside Git at
 `C:\Users\getch\AppData\Local\Temp\exp018-ppo-smoke-20260828.log`.
 
+No TensorBoard event file, run directory, agent/environment dump, checkpoint,
+or PPO metric tag was emitted because startup failed before the runner began.
+
 ## Early PPO Visual Check
 
 `NOT_RUN`: the smoke did not produce a usable checkpoint, so the Learning UI
