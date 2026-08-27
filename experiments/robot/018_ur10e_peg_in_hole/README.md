@@ -16,15 +16,18 @@ policy input or reward term.
 ## Scope and status
 
 This is an external Isaac Lab task.  It is registered by
-`learning_lab.register_tasks` and uses the pinned upstream UR10e asset,
+`registration.register_tasks` and uses the pinned upstream UR10e asset,
 manager-based environment, PhysX backend, differential IK action term, and
 RSL-RL trainer.  No Isaac Lab source, root dependency, reusable platform
 module, gripper, camera, ROS bridge, or generic RL wrapper is added.
 
 `TASK_UI_VERIFIED`: `true` after the finite Kit GUI probe, deterministic
 axis/insertion probe, random probe, and timeout/reset checks completed.
-`TRAINING_NOT_STARTED`: true.  A 1,000-iteration PPO run is intentionally not
-part of v0 implementation.
+`PIPELINE_VERIFIED`: `true` after the pre-Kit import gate and the exact
+five-iteration PPO pipeline smoke completed.
+`LEARNING_NOT_ESTABLISHED`: `true`; five iterations are pipeline evidence only.
+`TRAINING_NOT_STARTED`: true for the 1,000-iteration baseline, which remains
+out of scope for this smoke.
 
 ## External baseline
 
@@ -139,16 +142,16 @@ Set-Location C:\dev\IsaacLab
 This probe is for GUI/runtime verification only; it is not a learned policy
 and must not be reported as PPO training.
 
-## PPO configuration (created for the later gate, not run here)
+## PPO configuration and pipeline smoke
 
 `UR10ePegInsertPPORunnerCfg` follows the official Experiment 017 RSL-RL
 starting values: actor/critic MLP hidden dimensions `[64, 64]`, ELU actor and
 critic, Gaussian initial standard deviation `1.0`, 24 steps per environment,
 8 learning epochs, 4 mini-batches, adaptive learning rate `1e-3`, `γ=0.99`,
 `λ=0.95`, desired KL `0.01`, clip `0.2`, and entropy coefficient `0.001`.
-The registered configuration has `max_iterations=1000`, but no trainer command
-is part of the v0 task configuration; the first official CLI smoke result is
-recorded below.
+The registered configuration has `max_iterations=1000`; the first official CLI
+smoke is intentionally capped at five iterations and is recorded below.  The
+1,000-iteration baseline was not run.
 
 ## Verification gate
 
@@ -188,10 +191,30 @@ The deterministic insertion controller was not used for this baseline.  The
 full generated log remains outside Git at
 `C:\Users\getch\AppData\Local\Temp\exp018-random-baseline-20260828.log`.
 
-## PPO Pipeline Smoke
+## Registration boundary and PPO pipeline smoke
 
-The pinned official command was used exactly once after registration and
-baseline checks:
+The first PPO CLI attempt failed before rollout because the callback imported
+`learning_lab.py` while the official trainer was still parsing arguments.  That
+module imported Kit/PhysX-backed runtime classes at module scope, so the later
+SimulationApp saw preloaded `pxr`, `omni.usd`, and `omni.physx` modules.  The
+captured failure remains outside Git at
+`C:\Users\getch\AppData\Local\Temp\exp018-ppo-smoke-20260828.log`.
+
+The fix adds `registration.py`.  It owns the constants, Gym registration,
+environment/PPO config classes, and only explicit lazy manager-term forwarders;
+it never imports `learning_lab` at module import.  The registry now points to
+`registration.register_tasks`, runtime entry point
+`learning_lab:UR10ePegInsertEnv`, and config entry points in
+`registration.py`.
+
+A fresh bundled-Python pre-Kit test imported the registration callback, loaded
+both config types, and confirmed that `learning_lab`, `pxr`, `omni.usd`, and
+`omni.physx` were absent from `sys.modules` before SimulationApp.  The finite
+deterministic probe then instantiated the task with `obs_dim=(10,)` and
+`action_dim=3`, produced finite tensors, reset successfully, and reached the
+task's success termination at steps 140 and 233.
+
+The exact five-iteration retry command was run once:
 
 ```powershell
 $env:PYTHONPATH = 'C:\dev\robotics-rnd-platform'
@@ -207,30 +230,57 @@ Set-Location C:\dev\IsaacLab
   --logger tensorboard `
   --run_name exp018_smoke_seed42 `
   --device cuda:0 `
-  --external_callback experiments.robot.018_ur10e_peg_in_hole.learning_lab.register_tasks
+  --external_callback experiments.robot.018_ur10e_peg_in_hole.registration.register_tasks
 ```
 
-The batch wrapper returned exit code `0`, but the trainer log contains a fatal
-`RuntimeError: Caught an unknown exception!` during Isaac Sim extension startup
-before environment rollout.  The callback imports pxr-backed modules while the
-official trainer is still parsing arguments; the subsequent SimulationApp
-startup reports preloaded USD modules and failed `omni.kit.usd.layers`,
-`omni.physx`, and pxr converter initialization.  No PPO iteration completed.
+The run completed with batch exit code `0`, five iterations, and 7,680
+transitions (`64 × 24 × 5`).  It emitted a TensorBoard event file and saved
+`model_0.pt` and `model_4.pt` under:
 
-The captured log is outside Git at
-`C:\Users\getch\AppData\Local\Temp\exp018-ppo-smoke-20260828.log`.
+`C:\dev\IsaacLab\logs\rsl_rl\ur10e_peg_insert_learning\2026-08-28_00-46-42_exp018_smoke_seed42`
 
-No TensorBoard event file, run directory, agent/environment dump, checkpoint,
-or PPO metric tag was emitted because startup failed before the runner began.
+The run used seed `42`, `cuda:0`, PhysX, and the configured 24 steps per
+environment.  The event tags were:
+
+`Episode_Reward/alignment_progress`,
+`Episode_Reward/insertion_progress`, `Episode_Reward/success_bonus`,
+`Episode_Termination/success`, `Episode_Termination/time_out`, `Loss/value`,
+`Loss/surrogate`, `Loss/entropy`, `Loss/learning_rate`, `Policy/mean_std`,
+`Perf/total_fps`, `Perf/collection_time`, `Perf/learning_time`,
+`Train/mean_reward`, `Train/mean_episode_length`,
+`Train/mean_reward/time`, and `Train/mean_episode_length/time`.
+
+`Train/mean_reward` progressed from `-0.000191886` at iteration 0 to
+`-0.00120919` at iteration 4; success remained `0.0` in all five iterations.
+`Train/mean_episode_length` progressed from `10.25` to `64.9143` steps.  The
+final `Loss/value`, `Loss/surrogate`, `Loss/entropy`, `Loss/learning_rate`, and
+`Policy/mean_std` values were `3.989e-05`, `-0.00617167`, `4.20812`,
+`0.000666667`, and `0.981532` respectively.
+
+Checkpoint hashes (SHA-256) are recorded here for reproducibility:
+
+- `model_0.pt`: `89B43394F8B100E9D3D19DD1A4C663920480F34D3CC0BC4B02F2362C6F957F2F`
+- `model_4.pt`: `3E83D0DC8DF00AD06BD9AA0A22E0A425E8E3382EE1576DD75661028AE53CED1A`
+
+The original wrapper warning about a missing `_isaac_sim\setup_conda_env.bat`
+was preserved; the run nevertheless used Isaac Sim's bundled Python.  PhysX
+also reported the existing disjointed `ee_joint` transform warning and RSL-RL
+reported that `obs_groups` omitted explicit `actor`/`critic` keys.
 
 ## Early PPO Visual Check
 
-`NOT_RUN`: the smoke did not produce a usable checkpoint, so the Learning UI
-was not switched to an Early PPO policy.  The existing native UI remains task
-UI evidence only; no learned-policy comparison is reported.
+The official `play` command loaded `model_4.pt` with the same registration
+callback, `--num_envs 1`, seed `42`, PhysX, and the Kit visualizer.  A finite
+120-step video completed and was written to:
+
+`C:\dev\IsaacLab\logs\rsl_rl\ur10e_peg_insert_learning\2026-08-28_00-46-42_exp018_smoke_seed42\videos\play\rl-video-step-0.mp4`
+
+The MP4 is 4.0 s (373,536 bytes); a rendered mid-run frame showed the UR10e
+and attached peg in the Isaac Sim viewport.  This is an early pipeline visual
+check only, not evidence that PPO learned the task.
 
 ## Current Classification
 
 - `TASK_UI_VERIFIED`
-- `PIPELINE_VERIFIED`: not established; trainer startup stopped before rollout
+- `PIPELINE_VERIFIED`
 - `LEARNING_NOT_ESTABLISHED`
