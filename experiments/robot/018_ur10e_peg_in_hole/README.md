@@ -147,7 +147,8 @@ critic, Gaussian initial standard deviation `1.0`, 24 steps per environment,
 8 learning epochs, 4 mini-batches, adaptive learning rate `1e-3`, `γ=0.99`,
 `λ=0.95`, desired KL `0.01`, clip `0.2`, and entropy coefficient `0.001`.
 The registered configuration has `max_iterations=1000`, but no trainer command
-is included in the v0 GUI-first verification.
+is part of the v0 task configuration; the first official CLI smoke result is
+recorded below.
 
 ## Verification gate
 
@@ -162,4 +163,71 @@ The finite GUI/runtime gate is complete for the v0 task:
 - Random-action probe ran 30 steps and exited with code 0.
 
 The probe is not a learned policy.  PPO configuration is present for the later
-experiment, but no PPO iteration or baseline training has been run.
+experiment; no PPO iteration has completed, and the random baseline is
+documented below.
+
+## Random Policy Baseline
+
+Classification: `RANDOM_BASELINE`.
+
+The unchanged task was run with 64 vectorized environments, seed `42`, and the
+same conservative random action source as the finite probe:
+`uniform[-0.3, 0.3]` in normalized action units.  The one-off measurement
+collected 128 complete episodes (478 vectorized policy steps):
+
+| Metric | Result |
+| --- | ---: |
+| Completed episodes | 128 |
+| Successes / success rate | 0 / 0.0% |
+| Mean final XY error | 0.0141744 m (14.1744 mm) |
+| Mean maximum insertion depth | 0.0000000 m |
+| Mean episode length | 239 policy steps |
+| Mean episodic reward | -0.000177807 |
+
+The deterministic insertion controller was not used for this baseline.  The
+full generated log remains outside Git at
+`C:\Users\getch\AppData\Local\Temp\exp018-random-baseline-20260828.log`.
+
+## PPO Pipeline Smoke
+
+The pinned official command was used exactly once after registration and
+baseline checks:
+
+```powershell
+$env:PYTHONPATH = 'C:\dev\robotics-rnd-platform'
+Set-Location C:\dev\IsaacLab
+.\isaaclab.bat train `
+  --rl_library rsl_rl `
+  --task Isaac-UR10e-PegInsert-Learning-v0 `
+  --num_envs 64 `
+  --max_iterations 5 `
+  --seed 42 `
+  --deterministic `
+  --headless `
+  --logger tensorboard `
+  --run_name exp018_smoke_seed42 `
+  --device cuda:0 `
+  --external_callback experiments.robot.018_ur10e_peg_in_hole.learning_lab.register_tasks
+```
+
+The batch wrapper returned exit code `0`, but the trainer log contains a fatal
+`RuntimeError: Caught an unknown exception!` during Isaac Sim extension startup
+before environment rollout.  The callback imports pxr-backed modules while the
+official trainer is still parsing arguments; the subsequent SimulationApp
+startup reports preloaded USD modules and failed `omni.kit.usd.layers`,
+`omni.physx`, and pxr converter initialization.  No PPO iteration completed.
+
+The captured log is outside Git at
+`C:\Users\getch\AppData\Local\Temp\exp018-ppo-smoke-20260828.log`.
+
+## Early PPO Visual Check
+
+`NOT_RUN`: the smoke did not produce a usable checkpoint, so the Learning UI
+was not switched to an Early PPO policy.  The existing native UI remains task
+UI evidence only; no learned-policy comparison is reported.
+
+## Current Classification
+
+- `TASK_UI_VERIFIED`
+- `PIPELINE_VERIFIED`: not established; trainer startup stopped before rollout
+- `LEARNING_NOT_ESTABLISHED`
