@@ -27,10 +27,11 @@ Current classification:
 - `TASK_UI_VERIFIED`
 - `RANDOMIZED_TASK_VERIFIED`
 - `PIPELINE_VERIFIED`
-- `LEARNING_NOT_ESTABLISHED`
+- `LEARNING_ESTABLISHED`
 
-The 1,000-iteration baseline remains intentionally unrun.  The fixed-hole v0
-pipeline evidence is retained below as historical evidence.
+The unchanged v1 1,000-iteration PPO baseline and deterministic checkpoint
+evaluation are recorded below.  The fixed-hole v0 pipeline evidence is
+retained below as historical evidence.
 
 ## External baseline
 
@@ -38,6 +39,10 @@ pipeline evidence is retained below as historical evidence.
 - Exact commit: `418ca31b47a8eb27db8aefcfc134e4c4f1d2b6f3`
 - Isaac Sim: `C:\isaacsim` pre-built binary, version `6.0.1`
 - Bundled Python: `C:\dev\IsaacLab\_isaac_sim\kit\python\python.exe`
+- Bundled Python runtime: `3.12.13`
+- PyTorch: `2.10.0+cu128` (torch CUDA `12.8`, `torch.cuda.is_available() = True`)
+- RSL-RL: `rsl-rl-lib 5.0.1`
+- GPU: `NVIDIA GeForce RTX 4070 Ti` (driver `591.86`, 12,282 MiB reported)
 - Robot source: upstream `isaaclab_assets.robots.universal_robots.UR10e_CFG`
 - Active task IDs: `Isaac-UR10e-PegInsert-Learning-v1` and
   `Isaac-UR10e-PegInsert-Learning-Play-v1`
@@ -163,8 +168,8 @@ actor/critic MLP hidden dimensions `[64, 64]`, ELU actor and critic, Gaussian
 initial standard deviation `1.0`, `24` steps per environment, `8` learning
 epochs, `4` mini-batches, adaptive learning rate `1e-3`, `γ=0.99`, `λ=0.95`,
 desired KL `0.01`, clip `0.2`, and entropy coefficient `0.001`.  The registered
-configuration still has `max_iterations=1000`; only the five-iteration smoke
-was rerun for v1.
+configuration still has `max_iterations=1000`; the five-iteration smoke and the
+first unchanged 1,000-iteration baseline are recorded below.
 
 ## v0 Historical Evidence
 
@@ -395,6 +400,230 @@ notice for missing `_isaac_sim\setup_conda_env.bat`, the expected Windows
 `libcarb.so` Fabric notice, noisy-velocity/TGS and disjointed `ee_joint` PhysX
 warnings, RSL-RL `obs_groups` fallback warnings, and the optional
 `isaaclab_visualizers` extension configuration warning.
+
+## v1 Meaningful PPO Baseline
+
+### Training Run
+
+The first unchanged v1 baseline used the official Isaac Lab trainer, the
+external task callback, RSL-RL `5.0.1`, seed `42`, `64` environments, `24`
+steps per environment, PhysX, CUDA, headless Kit, and TensorBoard:
+
+```powershell
+$log = 'C:\Users\getch\AppData\Local\Temp\exp018-v1-baseline-seed42.log'
+$env:PYTHONPATH = 'C:\dev\robotics-rnd-platform'
+Set-Location C:\dev\IsaacLab
+.\isaaclab.bat train `
+  --rl_library rsl_rl `
+  --task Isaac-UR10e-PegInsert-Learning-v1 `
+  --num_envs 64 `
+  --max_iterations 1000 `
+  --seed 42 `
+  --deterministic `
+  --headless `
+  --logger tensorboard `
+  --run_name exp018_v1_baseline_seed42 `
+  --device cuda:0 `
+  --external_callback experiments.robot.018_ur10e_peg_in_hole.registration.register_tasks *> $log
+```
+
+The command exited `0`.  It ran from
+`2026-08-27T17:40:21.4905920Z` through
+`2026-08-27T18:10:21.5656829Z`: wrapper wall time `1,800.05 s`, with trainer
+reported training time `1,780.84 s`.  The final trainer line was
+`Learning iteration 999/1000`, with exactly
+`64 × 24 × 1000 = 1,536,000` environment transitions.
+
+The external run directory is
+
+`C:\dev\IsaacLab\logs\rsl_rl\ur10e_peg_insert_learning\2026-08-28_02-40-31_exp018_v1_baseline_seed42`
+
+and the complete redirected log remains at
+`C:\Users\getch\AppData\Local\Temp\exp018-v1-baseline-seed42.log`.
+
+### Learning Curves
+
+The event file emitted these task and trainer tags:
+
+`Episode_Reward/alignment_progress`,
+`Episode_Reward/insertion_progress`, `Episode_Reward/success_bonus`,
+`Episode_Termination/success`, `Episode_Termination/time_out`, `Loss/value`,
+`Loss/surrogate`, `Loss/entropy`, `Loss/learning_rate`, `Policy/mean_std`,
+`Perf/total_fps`, `Perf/collection_time`, `Perf/learning_time`,
+`Train/mean_reward`, `Train/mean_episode_length`,
+`Train/mean_reward/time`, and `Train/mean_episode_length/time`.
+
+Task-facing progression sampled from TensorBoard (`999` is the final event
+for the `1000`-iteration run):
+
+| Iteration | Mean reward | Mean episode length | Alignment reward | Insertion reward | Success bonus | Success | Time-out |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 0 | -0.0002275561 | 14.7692 | -0.0000519364 | 0.0000000000 | 0.0000000000 | 0.0000 | 0.0866 |
+| 100 | 0.0875914916 | 208.4600 | 0.0000361454 | 0.0008128257 | 0.0034722225 | 0.3190 | 0.6810 |
+| 250 | 0.3434434235 | 58.2500 | 0.0000497039 | 0.0013874609 | 0.0416666679 | 1.0000 | 0.0000 |
+| 500 | 0.3389396667 | 28.8500 | 0.0000462484 | 0.0010688945 | 0.0413194448 | 0.9902 | 0.0098 |
+| 750 | 0.3383373916 | 25.6700 | 0.0000475335 | 0.0010365272 | 0.0412326418 | 0.9863 | 0.0137 |
+| 999 | 0.3414654136 | 21.5100 | 0.0000455818 | 0.0009533769 | 0.0416666679 | 1.0000 | 0.0000 |
+
+Optimizer progression:
+
+| Iteration | Value loss | Surrogate loss | Entropy | Learning rate | Policy mean std |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 0 | 0.0066048447 | -0.0138215972 | 4.2718801498 | 0.0015000000 | 1.0087829828 |
+| 100 | 0.0007274114 | -0.0066382703 | 2.4583601952 | 0.0000759375 | 0.5713808537 |
+| 250 | 0.0004787729 | -0.0079200417 | 1.4438188076 | 0.0003844336 | 0.4134729207 |
+| 500 | 0.0003663404 | -0.0005662279 | -0.4856194556 | 0.0002562891 | 0.2411780357 |
+| 750 | 0.0002415750 | -0.0027804510 | -1.3534421921 | 0.0000759375 | 0.1757015735 |
+| 999 | 0.0005307611 | 0.0011868129 | -2.4227828979 | 0.0001139063 | 0.1333562881 |
+
+The reward and success curves are reported separately: the observed reward
+increase is accompanied by a high `Episode_Termination/success` value, while
+the configured adaptive learning-rate tag is the value emitted by RSL-RL.
+
+### Checkpoint Evidence
+
+The trainer wrote these external checkpoints:
+
+`model_0.pt`, `model_50.pt`, `model_100.pt`, `model_150.pt`,
+`model_200.pt`, `model_250.pt`, `model_300.pt`, `model_350.pt`,
+`model_400.pt`, `model_450.pt`, `model_500.pt`, `model_550.pt`,
+`model_600.pt`, `model_650.pt`, `model_700.pt`, `model_750.pt`,
+`model_800.pt`, `model_850.pt`, `model_900.pt`, `model_950.pt`, and
+`model_999.pt`.
+
+The selected evaluation checkpoint is `model_999.pt` (136,059 bytes),
+SHA-256
+`D5D9AED8CA05D6BF5A9E64357BE146DD8E10782646ADEDC3E255A962CCF7CFAF`.
+The trainer did not emit a separate `best_model`; no best-checkpoint claim is
+made.
+
+### Resource Usage
+
+The same workstation reported `NVIDIA GeForce RTX 4070 Ti`, driver `591.86`,
+and `12,282 MiB` total VRAM.  `nvidia-smi` samples were `1,957 MiB` before
+training, `4,290–4,358 MiB` during sampled training (maximum observed
+`4,358 MiB`), and `1,833 MiB` after trainer shutdown.  No out-of-memory event
+occurred.
+
+The run used Isaac Sim `6.0.1` pre-built binaries through the bundled Python
+`3.12.13`, PyTorch `2.10.0+cu128` (`torch.version.cuda = 12.8`, CUDA available),
+Isaac Lab source commit `418ca31b47a8eb27db8aefcfc134e4c4f1d2b6f3`, and
+`rsl-rl-lib 5.0.1`.  Runtime package metadata reports `isaaclab` `6.1.14`,
+while `isaaclab.__version__` is `6.1.16`; the imported package files remain
+source-linked to the pinned checkout.
+
+### Trained Evaluation
+
+The selected checkpoint was evaluated deterministically on the same v1 task
+distribution for `256` completed episodes.  The one-off evaluator used the
+official task and RSL-RL inference path; its JSON summary is external at
+`C:\Users\getch\AppData\Local\Temp\exp018-v1-eval-model999-seed42.json`.
+
+| Metric | Trained PPO (`model_999.pt`) |
+| --- | ---: |
+| Completed episodes | 256 |
+| Successes / success rate | 256 / 100.0% |
+| Mean final XY error | 4.3505043 mm |
+| Median final XY error | 4.4388042 mm |
+| Mean maximum insertion depth | 73.5355400 mm |
+| Median maximum insertion depth | 63.1597340 mm |
+| Mean episode length | 20.0898438 policy steps |
+| Mean episodic reward | 0.3410851093 |
+| Vectorized policy steps | 95 |
+
+The per-region results were `backward 42/42`, `center 62/62`, `forward 45/45`,
+`left 65/65`, and `right 42/42`.  A second deterministic evaluation with the
+same seed and checkpoint produced the same values and counts exactly; its
+external summary is
+`C:\Users\getch\AppData\Local\Temp\exp018-v1-eval-model999-seed42-repeat.json`.
+
+### Random vs Trained
+
+The already-recorded random baseline used the same v1 task distribution,
+`64` environments, seed `42`, and normalized `uniform[-0.3, 0.3]` actions for
+`128` completed episodes.
+
+| Metric | Random v1 (`128` eps) | Trained PPO (`256` eps) |
+| --- | ---: | ---: |
+| Successes / success rate | 0 / 0.0% | 256 / 100.0% |
+| Mean final XY error | 13.6548 mm | 4.3505 mm |
+| Mean maximum insertion depth | 0.0000 mm | 73.5355 mm |
+| Mean episode length | 239 steps | 20.0898 steps |
+| Mean episodic reward | -0.0001485529 | 0.3410851093 |
+
+The trained result is materially better on every frozen task metric, including
+the explicit insertion-success condition; the different episode counts are
+reported rather than pooled.
+
+### Failure Analysis or Learning Evidence
+
+The first external evaluation attempt stopped before rollout because passing
+the raw RSL-RL config directly constructed `MLPModel` with an unsupported
+`stochastic` keyword.  The evaluator was then aligned with the official
+trainer's `handle_deprecated_rsl_rl_cfg` conversion.  A second debug attempt
+reached rollout but exposed a CPU/CUDA telemetry-only error in the temporary
+evaluator's final-depth aggregation; keeping the final-depth tensor on CUDA
+fixed that evaluator issue.  No task, reward, observation, action, or PPO
+configuration was changed for either correction.
+
+The 1,000-iteration run itself completed without an OOM or runtime exception.
+Its non-fatal warnings remain in the external log: the missing pre-built-binary
+`_isaac_sim\setup_conda_env.bat` wrapper notice, the Windows `libcarb.so`
+Fabric logging/cp949 traceback, optional `isaaclab_visualizers` configuration,
+MaterialX, PhysX TGS noisy-velocity, repeated disjointed `ee_joint` transform,
+and RSL-RL `obs_groups` actor/critic fallback warnings.  They did not stop
+training or evaluation.
+
+The converged success signal, insertion depth, shorter episodes, lower XY
+error, exact repeat evaluation, and all five sampled hole-position regions
+support the classification `LEARNING_ESTABLISHED` for this frozen v1 task and
+seed.  This does not establish robustness to a new seed or distribution.
+
+### GUI Playback
+
+The selected checkpoint was replayed through the native Learning Lab Kit UI
+with one environment, randomized reset holes, and mode `TRAINED PPO` for
+`900` steps.  The external summary is
+`C:\Users\getch\AppData\Local\Temp\exp018-v1-gui-playback-long.json`;
+the video is
+`C:\Users\getch\AppData\Local\Temp\exp018-v1-gui-playback-long\rl-video-step-0.mp4`
+(`1280 × 720`, `30 fps`, `900` frames, `30 s`).  The run observed `42` resets
+with varied target offsets.  Inspected captures include:
+
+- `C:\Users\getch\AppData\Local\Temp\exp018-v1-gui-playback-long\desktop-ui-trained-1.png` (`[-9.55, -16.82]` mm)
+- `C:\Users\getch\AppData\Local\Temp\exp018-v1-gui-playback-long\desktop-ui-trained-2.png` (`[+2.92, -17.35]` mm)
+- `C:\Users\getch\AppData\Local\Temp\exp018-v1-gui-playback-long\desktop-ui-trained-3.png` (`[-9.63, +21.21]` mm)
+
+The UI showed the same trained policy responding after different randomized
+hole resets; the aggregate result above is the quantitative claim.
+
+### Parallel Visual
+
+A short `9`-environment Kit preview used the same trained checkpoint for
+`120` steps with independent randomized holes.  It exited `0`; the external
+video is
+`C:\Users\getch\AppData\Local\Temp\exp018-v1-parallel-playback-correct\rl-video-step-0.mp4`
+(`1280 × 720`, `30 fps`, `120` frames, `4 s`) and the inspected desktop frame is
+`C:\Users\getch\AppData\Local\Temp\exp018-v1-parallel-playback-correct\desktop-parallel-1.png`.
+The preview showed nine UR10e instances and the UI mode `TRAINED PPO`; its
+JSON contains distinct offsets for all nine environments.
+
+### Repository Update
+
+Only this existing `README.md` is changed to record the measured baseline.
+The generated checkpoints, TensorBoard event file, logs, videos, screenshots,
+temporary evaluator/playback scripts, caches, root dependencies,
+`src/robotics_rnd`, and Isaac Lab checkout remain outside the tracked change.
+
+### Classification
+
+`LEARNING_ESTABLISHED`
+
+### Next Best Action
+
+Run one hold-out robustness experiment with the same frozen task and PPO
+configuration at seed `43` (including the same deterministic evaluation
+protocol) before changing rewards, observations, actions, or optimizer values.
 
 ## Files changed
 
