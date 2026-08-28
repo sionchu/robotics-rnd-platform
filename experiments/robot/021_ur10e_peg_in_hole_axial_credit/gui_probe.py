@@ -69,7 +69,9 @@ try:
                 "xy_error_mm": ui_state["xy_error_mm"],
                 "axial_remaining_mm": ui_state["axial_remaining_mm"],
                 "insertion_depth_mm": ui_state["insertion_mm"],
+                "alignment_progress_reward": rewards.get("alignment_progress", 0.0),
                 "axial_progress_reward": rewards.get("gated_axial_progress", 0.0),
+                "reward_total": ui_state["reward_total"],
                 "success": ui_state["success"],
             }
         )
@@ -90,8 +92,10 @@ try:
         "action_space": str(env.action_space),
         "ui_labels": {
             "flow": "ALIGN  ↓  AXIAL APPROACH  ↓  INSERT  ↓  SUCCESS",
+            "alignment": "Reward: alignment +x.xxxx",
             "remaining": "Axial Remaining: xx.x mm",
-            "reward": "Axial Progress Reward: +x.xxxx",
+            "axial": "Axial Progress Reward: +x.xxxx",
+            "reward": "Reward: alignment +x.xxxx | axial +x.xxxx | success +x.xxxx | total +x.xxxx",
         },
         "samples": samples,
     }

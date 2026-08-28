@@ -48,8 +48,41 @@ try:
     records: list[dict[str, Any]] = []
     start = time.perf_counter()
     first_positive: dict[str, Any] | None = None
+    first_alignment_positive: dict[str, Any] | None = None
+    first_alignment_negative: dict[str, Any] | None = None
     for step in range(args.steps):
-        action = base_learning_lab._axis_probe_action(env, step)
+        state_before = base_learning_lab._runtime_task_state(env)
+        if step == 0:
+            action = torch.zeros((1, 3), device=env.device)
+            phase = "initialize"
+        elif step < 24:
+            action = torch.zeros((1, 3), device=env.device)
+            action[:, :2] = torch.clamp(
+                -state_before["peg_pos_rel_hole"][:, :2] / base_learning_lab.ACTION_SCALE_M * 0.5,
+                -1.0,
+                1.0,
+            )
+            phase = "improve"
+        elif step < 36:
+            action = torch.zeros((1, 3), device=env.device)
+            direction = torch.sign(state_before["peg_pos_rel_hole"][:, :2])
+            direction = torch.where(direction == 0.0, torch.ones_like(direction), direction)
+            action[:, :2] = direction * 0.5
+            phase = "worsen"
+        else:
+            action = torch.zeros((1, 3), device=env.device)
+            action[:, :2] = torch.clamp(
+                -state_before["peg_pos_rel_hole"][:, :2] / base_learning_lab.ACTION_SCALE_M * 0.5,
+                -1.0,
+                1.0,
+            )
+            aligned = state_before["xy_error"] <= base_learning_lab.ALIGNMENT_GATE_M
+            action[:, 2] = torch.where(
+                aligned & (state_before["insertion_depth"] < base_learning_lab.SUCCESS_DEPTH_M),
+                torch.full_like(state_before["insertion_depth"], -0.45),
+                torch.zeros_like(state_before["insertion_depth"]),
+            )
+            phase = "descend"
         with torch.inference_mode():
             _, _, terminated, truncated, _ = env.step(action)
         ui_after = env.task_state_for_ui()
@@ -68,6 +101,7 @@ try:
             "alignment_reward": reward_terms.get("alignment_progress", 0.0),
             "axial_reward": reward_terms.get("gated_axial_progress", 0.0),
             "success_reward": reward_terms.get("success_bonus", 0.0),
+            "phase": phase,
             "inside_xy_gate": ui_after["xy_error_mm"] <= base_learning_lab.ALIGNMENT_GATE_M * 1000.0,
             "above_hole_top": ui_after["z_error_mm"] > 0.0,
             "terminated": bool(torch.any(terminated).detach().cpu().item()),
@@ -75,6 +109,10 @@ try:
             "action": [float(value) for value in action[0].detach().cpu().tolist()],
         }
         records.append(record)
+        if first_alignment_positive is None and phase == "improve" and record["alignment_reward"] > 1.0e-9:
+            first_alignment_positive = record.copy()
+        if first_alignment_negative is None and phase == "worsen" and record["alignment_reward"] < -1.0e-9:
+            first_alignment_negative = record.copy()
         if (
             first_positive is None
             and record["above_hole_top"]
@@ -96,10 +134,14 @@ try:
         "steps_run": len(records),
         "elapsed_s": elapsed_s,
         "semantic_condition": {
+            "alignment_positive_after_init": first_alignment_positive is not None,
+            "alignment_negative_after_init": first_alignment_negative is not None,
             "above_top_insertion_zero": any(
                 row["above_hole_top"] and row["insertion_depth_mm"] <= 1.0e-6 for row in records
             ),
             "above_top_axial_positive_inside_gate": first_positive is not None,
+            "first_alignment_positive": first_alignment_positive,
+            "first_alignment_negative": first_alignment_negative,
             "first_positive": first_positive,
         },
         "records": records,
@@ -107,10 +149,19 @@ try:
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     print(json.dumps(summary["semantic_condition"], sort_keys=True), flush=True)
-    if not summary["semantic_condition"]["above_top_axial_positive_inside_gate"]:
+    conditions = summary["semantic_condition"]
+    if not all(
+        conditions[key]
+        for key in (
+            "alignment_positive_after_init",
+            "alignment_negative_after_init",
+            "above_top_insertion_zero",
+            "above_top_axial_positive_inside_gate",
+        )
+    ):
         raise RuntimeError(
-            "Semantic gate failed: no positive gated_axial_progress while above the "
-            "hole top inside the XY gate."
+            "Semantic gate failed: expected signed alignment and axial credit "
+            "conditions were not all demonstrated."
         )
 finally:
     if "env" in locals():

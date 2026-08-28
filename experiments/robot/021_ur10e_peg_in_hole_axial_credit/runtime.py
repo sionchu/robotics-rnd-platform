@@ -26,7 +26,7 @@ def gated_axial_progress(env: Any) -> torch.Tensor:
     """Reward signed downward progress toward the success-depth target."""
 
     current = axial_remaining(env)
-    valid = getattr(env, "_axial_tracker_valid", torch.zeros_like(current, dtype=torch.bool))
+    valid = getattr(env, "_tracker_valid", torch.zeros_like(current, dtype=torch.bool))
     previous = torch.where(valid, env._previous_axial_remaining, current)
     progress = previous - current
     value = (
@@ -36,7 +36,7 @@ def gated_axial_progress(env: Any) -> torch.Tensor:
         ).float()
     )
     env._previous_axial_remaining = current.detach()
-    env._axial_tracker_valid = torch.ones_like(valid)
+    env._tracker_valid = torch.ones_like(valid)
     env._last_reward_axial = value.detach()
     return value
 
@@ -49,14 +49,12 @@ class UR10eAxialCreditEnv(base_runtime.UR10eStatePrecisionEnv):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         self._previous_axial_remaining = torch.zeros(self.num_envs, device=self.device)
-        self._axial_tracker_valid = torch.zeros(self.num_envs, device=self.device, dtype=torch.bool)
         self._last_reward_axial = torch.zeros(self.num_envs, device=self.device)
 
     def _reset_idx(self, env_ids: Any) -> None:
         super()._reset_idx(env_ids)
         ids = base_learning_lab._env_ids(self, env_ids)
         self._previous_axial_remaining[ids] = 0.0
-        self._axial_tracker_valid[ids] = False
         self._last_reward_axial[ids] = 0.0
 
     def task_state_for_ui(self) -> dict[str, Any]:
