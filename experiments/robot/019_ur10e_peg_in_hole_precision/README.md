@@ -198,16 +198,133 @@ Experiment 018 implementation and README were not modified.  No checkpoints,
 videos, logs, caches, root dependencies, reusable-platform modules, or force
 features were added to Git.
 
+## Paired Reset Follow-Up
+
+The initial four runs above used the same seed and reset distributions, but
+vectorized environments reset in a different completion order as the aperture
+tightened.  This follow-up removes that ordering confounder without changing
+the policy or task: one explicit reset plan was replayed at the `50 mm / 5 mm`
+and `46 mm / 3 mm` levels.
+
+The plan is deterministic and external to the simulator RNG.  It uses
+`Python random.Random(seed)` (MT19937), iterates env-major, performs four
+uniform draws per episode, and rounds values to `1e-6 mm`:
+
+- plan/evaluation seed: `43`;
+- dimensions: `64` environments × `4` episodes = `256` paired episodes;
+- hole offsets: `X ±40 mm`, `Y ±30 mm`;
+- initial peg offsets: `X ±15 mm`, `Y ±15 mm`;
+- plan SHA-256: `ece1662c6b5de3016c77b67c667b75f37551b3de80eaf137897645576abd2f2c`.
+
+Each JSON record has a stable ID (`env_00_ep_00` through
+`env_63_ep_03`) and contains the planned offsets, success/timeout flags,
+final XY error, final and maximum insertion depth, episode length, episodic
+reward, maximum wrist contact diagnostic, region, and misaligned-insertion
+flag.  The RSL-RL wrapper's internal warm-up reset used the original reset
+function; the explicit evaluator began at plan episode `0` for every
+environment.  Both runs consumed exactly four planned entries per
+environment.
+
+Exact commands (generated summaries and logs remain outside Git):
+
+```powershell
+$script = 'C:\dev\robotics-rnd-platform\experiments\robot\019_ur10e_peg_in_hole_precision\precision_probe.py'
+$checkpoint = 'C:\dev\IsaacLab\logs\rsl_rl\ur10e_peg_insert_learning\2026-08-28_02-40-31_exp018_v1_baseline_seed42\model_999.pt'
+$env:PYTHONPATH = 'C:\dev\robotics-rnd-platform'
+Set-Location C:\dev\IsaacLab
+.\isaaclab.bat -p $script --task Isaac-UR10e-PegInsert-Learning-v1 --checkpoint $checkpoint --hole_mm 50 --num_envs 64 --episodes 256 --seed 43 --paired-reset-seed 43 --episodes-per-env 4 --output C:\Users\getch\AppData\Local\Temp\exp019-paired-50-seed43-final.json --headless --device cuda:0
+.\isaaclab.bat -p $script --task Isaac-UR10e-PegInsert-Learning-v1 --checkpoint $checkpoint --hole_mm 46 --num_envs 64 --episodes 256 --seed 43 --paired-reset-seed 43 --episodes-per-env 4 --output C:\Users\getch\AppData\Local\Temp\exp019-paired-46-seed43-final.json --headless --device cuda:0
+```
+
+### Paired Performance
+
+| Hole | Side clearance | Success | Mean final XY | Median final XY | Mean max insertion | Median max insertion | Mean episode length | Mean reward |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 50 mm | 5 mm | 252/256 (98.4375%) | 4.4307 mm | 4.5276 mm | 79.4248 mm | 63.9306 mm | 25.7188 | 0.3364138 |
+| 46 mm | 3 mm | 219/256 (85.5469%) | 2.9876 mm | 2.8789 mm | 109.1742 mm | 118.6697 mm | 71.8164 | 0.2965152 |
+
+The `50 mm` run took `355` vector steps (`14.4560 s` evaluator elapsed;
+`35.4130 s` wall in the Isaac Lab wrapper).  The `46 mm` run took `574`
+vector steps (`22.0998 s` evaluator elapsed; `37.3085 s` wall in the wrapper).
+All `256` planned records and reset events were present in each output.
+
+| Hole | Mean max wrist contact | Median max wrist contact | Maximum wrist contact |
+| ---: | ---: | ---: | ---: |
+| 50 mm | 29.2193 N | 13.9756 N | 107.6450 N |
+| 46 mm | 68.5698 N | 73.5678 N | 118.3629 N |
+
+### Paired Outcome Cells
+
+Joining the two outputs by stable episode ID gives the following exact
+comparison:
+
+| 50 mm / 5 mm | 46 mm / 3 mm | Episodes |
+| --- | --- | ---: |
+| success | success | 218 |
+| success | failure/timeout | 34 |
+| failure/timeout | success | 1 |
+| failure/timeout | failure/timeout | 3 |
+
+Thus `34` of the `37` failures at `46 mm / 3 mm` are newly introduced by the
+tighter aperture under identical reset inputs.  Three episodes fail at both
+levels, and one episode is successful only at the tighter level; those raw
+cells are retained rather than averaged away.
+
+### Failure Localization
+
+For the `34` success-at-50 / failure-at-46 episodes:
+
+| Quantity | Mean | Median | Minimum | Maximum |
+| --- | ---: | ---: | ---: | ---: |
+| Hole X offset | 7.9729 mm | 14.5056 mm | -39.7906 mm | 38.8133 mm |
+| Hole Y offset | -3.1150 mm | -7.5313 mm | -28.7646 mm | 28.5674 mm |
+| Initial peg XY magnitude | 13.5063 mm | 13.4450 mm | 4.8155 mm | 20.4514 mm |
+| Initial peg X offset | -5.8263 mm | -7.0820 mm | -14.6576 mm | 14.7275 mm |
+| Initial peg Y offset | -5.6868 mm | -9.8227 mm | -14.6737 mm | 12.2279 mm |
+| 46 mm final XY error | 4.2526 mm | 4.2227 mm | 3.1999 mm | 5.5891 mm |
+| 46 mm maximum insertion | 49.3977 mm | 52.6882 mm | 0.0000 mm | 118.8551 mm |
+| 46 mm episode length | 239.0000 | 239.0000 | 239.0000 | 239.0000 |
+| 46 mm maximum wrist contact | 47.8885 N | 45.1945 N | 22.8926 N | 89.7992 N |
+
+All `37` failures at `46 mm / 3 mm` timed out and had final XY error above
+the declared `3 mm` tolerance (minimum `3.1549 mm`).  Across all 37 failures,
+mean maximum insertion was `55.0270 mm` and mean maximum wrist contact was
+`50.0454 N`; successful episodes averaged `118.3223 mm` maximum insertion and
+`71.6995 N` contact.  The lower contact statistic in the failure subset does
+not support contact force as the primary explanation for the `3 mm` boundary.
+The wrist sensor is retained as a diagnostic, not a calibrated peg-wall force
+measurement.
+
+Region counts for the same paired IDs are:
+
+| Region | Episodes | 50 mm successes | 46 mm successes | 50-success → 46-failure |
+| --- | ---: | ---: | ---: | ---: |
+| center | 67 | 67 | 57 | 10 |
+| left | 53 | 53 | 50 | 3 |
+| right | 47 | 43 | 35 | 9 |
+| forward | 49 | 49 | 44 | 5 |
+| backward | 40 | 40 | 33 | 7 |
+
+Right-side resets have the highest `46 mm` failure count (`12/47`), followed
+by center (`10/67`) and backward (`7/40`); failures occur in every region and
+are not isolated to one location.
+
 ## Classification
 
-`PRECISION_BOUNDARY_MEASURED`
+The original four-level probe remains `PRECISION_BOUNDARY_MEASURED`.  The
+paired follow-up adds:
 
-This does not claim robustness to all clearances, sim-to-real readiness, or
-force awareness.
+`PAIRED_PRECISION_FAILURE_LOCALIZED`
+
+The evidence supports a predominantly state-based precision failure at the
+`46 mm / 3 mm` boundary under identical reset inputs.  It does not establish
+force awareness or a causal contact model; the earlier `44 mm / 2 mm` shallow,
+high-contact failures remain a separate contact-aware insertion question.
 
 ## Next Best Action
 
-Run one paired-reset follow-up at the measured `46 mm / 3 mm` boundary using a
-pre-generated seed-43 reset plan, then decide whether state-based precision
-learning or contact-aware insertion should be isolated first.  Do not tune the
-policy in this boundary-probe commit.
+Keep Experiment 018 and the frozen checkpoint unchanged.  If learning is
+authorized next, start a separate Experiment 020 that learns state-based
+precision at `46 mm / 3 mm` with the same explicit reset-plan evaluation, then
+investigate contact-aware insertion separately.  Do not tune the frozen policy
+inside this evaluation commit.
