@@ -167,12 +167,12 @@ the alignment tracker coupling was discovered afterward.
 ### Corrected reward semantic regression
 
 Command (external output:
-`C:\Users\getch\AppData\Local\Temp\exp021-trackerfix-semantic-probe.json`):
+`C:\Users\getch\AppData\Local\Temp\exp021-trackerfix-semantic-probe-v2.json`):
 
 ```powershell
 $env:PYTHONPATH = 'C:\dev\robotics-rnd-platform'
 Set-Location C:\dev\IsaacLab
-.\isaaclab.bat -p C:\dev\robotics-rnd-platform\experiments\robot\021_ur10e_peg_in_hole_axial_credit\semantic_probe.py --task Isaac-UR10e-PegInsert-AxialCredit-v1 --steps 220 --seed 42 --output C:\Users\getch\AppData\Local\Temp\exp021-trackerfix-semantic-probe.json --headless --device cuda:0
+.\isaaclab.bat -p C:\dev\robotics-rnd-platform\experiments\robot\021_ur10e_peg_in_hole_axial_credit\semantic_probe.py --task Isaac-UR10e-PegInsert-AxialCredit-v1 --steps 220 --seed 42 --output C:\Users\getch\AppData\Local\Temp\exp021-trackerfix-semantic-probe-v2.json --headless --device cuda:0
 ```
 
 Exit status was `0`.  All four mandatory conditions were true:
@@ -186,7 +186,10 @@ Exit status was `0`.  All four mandatory conditions were true:
   axial reward `+0.0001881123`).
 
 The same probe also recorded negative axial progress for upward motion.  This
-is the required semantic regression for both signed reward terms.
+time the rise phase was deliberately commanded: at step `50`, while still
+above the top (`insertion 0 mm`, XY `1.1267 mm`), axial reward was
+`-9.16421e-05`.  The required semantic regression flags were all true,
+including `axial_negative_on_rise`.
 
 ### Pre-repair Native Learning UI probe
 

@@ -50,6 +50,7 @@ try:
     first_positive: dict[str, Any] | None = None
     first_alignment_positive: dict[str, Any] | None = None
     first_alignment_negative: dict[str, Any] | None = None
+    first_axial_negative: dict[str, Any] | None = None
     for step in range(args.steps):
         state_before = base_learning_lab._runtime_task_state(env)
         if step == 0:
@@ -69,6 +70,29 @@ try:
             direction = torch.where(direction == 0.0, torch.ones_like(direction), direction)
             action[:, :2] = direction * 0.5
             phase = "worsen"
+        elif step < 48:
+            action = torch.zeros((1, 3), device=env.device)
+            action[:, :2] = torch.clamp(
+                -state_before["peg_pos_rel_hole"][:, :2] / base_learning_lab.ACTION_SCALE_M * 0.5,
+                -1.0,
+                1.0,
+            )
+            aligned = state_before["xy_error"] <= base_learning_lab.ALIGNMENT_GATE_M
+            action[:, 2] = torch.where(
+                aligned & (state_before["insertion_depth"] < base_learning_lab.SUCCESS_DEPTH_M),
+                torch.full_like(state_before["insertion_depth"], -0.45),
+                torch.zeros_like(state_before["insertion_depth"]),
+            )
+            phase = "descend"
+        elif step < 60:
+            action = torch.zeros((1, 3), device=env.device)
+            action[:, :2] = torch.clamp(
+                -state_before["peg_pos_rel_hole"][:, :2] / base_learning_lab.ACTION_SCALE_M * 0.5,
+                -1.0,
+                1.0,
+            )
+            action[:, 2] = 0.45
+            phase = "rise"
         else:
             action = torch.zeros((1, 3), device=env.device)
             action[:, :2] = torch.clamp(
@@ -113,6 +137,8 @@ try:
             first_alignment_positive = record.copy()
         if first_alignment_negative is None and phase == "worsen" and record["alignment_reward"] < -1.0e-9:
             first_alignment_negative = record.copy()
+        if first_axial_negative is None and phase == "rise" and record["axial_reward"] < -1.0e-9:
+            first_axial_negative = record.copy()
         if (
             first_positive is None
             and record["above_hole_top"]
@@ -142,6 +168,8 @@ try:
             "above_top_axial_positive_inside_gate": first_positive is not None,
             "first_alignment_positive": first_alignment_positive,
             "first_alignment_negative": first_alignment_negative,
+            "axial_negative_on_rise": first_axial_negative is not None,
+            "first_axial_negative": first_axial_negative,
             "first_positive": first_positive,
         },
         "records": records,
@@ -157,6 +185,7 @@ try:
             "alignment_negative_after_init",
             "above_top_insertion_zero",
             "above_top_axial_positive_inside_gate",
+            "axial_negative_on_rise",
         )
     ):
         raise RuntimeError(
