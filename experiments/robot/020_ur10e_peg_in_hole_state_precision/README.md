@@ -173,11 +173,11 @@ planned episodes.
 | --- | ---: | ---: |
 | Success | 219 / 256 (85.5469%) | 0 / 256 (0.0%) |
 | Mean final XY error | 2.9876 mm | 0.9813 mm |
-| Median final XY error | not retained in this comparison source | 0.9650 mm |
+| Median final XY error | 2.8789 mm | 0.9650 mm |
 | Mean maximum insertion | 109.1742 mm | 0.0000 mm |
-| Median maximum insertion | not retained in this comparison source | 0.0000 mm |
+| Median maximum insertion | 118.6697 mm | 0.0000 mm |
 | Mean episode length | 71.8164 steps | 239.0000 steps |
-| Mean episodic reward | source baseline retained in Experiment 019 | 0.000595925 |
+| Mean episodic reward | 0.2965152 | 0.000595925 |
 
 Experiment 020 recorded `256` timeouts and no contact-positive episodes.  The
 mean XY error is lower than the old policy because the new policy learned to
