@@ -295,6 +295,10 @@ not support contact force as the primary explanation for the `3 mm` boundary.
 The wrist sensor is retained as a diagnostic, not a calibrated peg-wall force
 measurement.
 
+The initial peg-offset sign quadrants for those 37 failures were `x-/y-: 21`,
+`x-/y+: 8`, `x+/y-: 4`, and `x+/y+: 4`.  This descriptive skew, together with
+the larger failure-subset offset magnitude, is not treated as a causal result.
+
 Region counts for the same paired IDs are:
 
 | Region | Episodes | 50 mm successes | 46 mm successes | 50-success → 46-failure |
