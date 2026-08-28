@@ -28,6 +28,7 @@ Current classification:
 - `RANDOMIZED_TASK_VERIFIED`
 - `PIPELINE_VERIFIED`
 - `LEARNING_ESTABLISHED`
+- `IN_DISTRIBUTION_HOLDOUT_VERIFIED`
 
 The unchanged v1 1,000-iteration PPO baseline and deterministic checkpoint
 evaluation are recorded below.  The fixed-hole v0 pipeline evidence is
@@ -621,9 +622,112 @@ temporary evaluator/playback scripts, caches, root dependencies,
 
 ### Next Best Action
 
-Run one hold-out robustness experiment with the same frozen task and PPO
-configuration at seed `43` (including the same deterministic evaluation
-protocol) before changing rewards, observations, actions, or optimizer values.
+The seed-43 in-distribution hold-out is recorded below.  Keep the task and PPO
+configuration frozen before deciding whether a further hold-out seed is needed.
+
+## Hold-Out Evaluation — Seed 43
+
+### Protocol
+
+The seed-42-trained checkpoint and all v1 task/PPO values were held fixed.  The
+same temporary evaluator and deterministic RSL-RL inference path were invoked
+with only the evaluation seed changed to `43`:
+
+```powershell
+$log = 'C:\Users\getch\AppData\Local\Temp\exp018-v1-eval-model999-seed43.log'
+$output = 'C:\Users\getch\AppData\Local\Temp\exp018-v1-eval-model999-seed43.json'
+$script = 'C:\Users\getch\AppData\Local\Temp\exp018_eval_seed42.py'
+$checkpoint = 'C:\dev\IsaacLab\logs\rsl_rl\ur10e_peg_insert_learning\2026-08-28_02-40-31_exp018_v1_baseline_seed42\model_999.pt'
+$env:PYTHONPATH = 'C:\dev\robotics-rnd-platform'
+Set-Location C:\dev\IsaacLab
+.\isaaclab.bat -p $script `
+  --task Isaac-UR10e-PegInsert-Learning-v1 `
+  --checkpoint $checkpoint `
+  --num_envs 64 `
+  --episodes 256 `
+  --seed 43 `
+  --output $output `
+  --headless `
+  --device cuda:0 *> $log
+```
+
+The command exited `0` with wrapper wall time `26.299 s` and evaluator rollout
+time `5.7328925 s`.  The checkpoint SHA-256 remained
+`D5D9AED8CA05D6BF5A9E64357BE146DD8E10782646ADEDC3E255A962CCF7CFAF`.
+
+### Hold-Out Metrics
+
+The external JSON summary is
+`C:\Users\getch\AppData\Local\Temp\exp018-v1-eval-model999-seed43.json`.
+
+| Metric | Seed-43 hold-out |
+| --- | ---: |
+| Completed episodes | 256 |
+| Successes / success rate | 256 / 100.0% |
+| Mean final XY error | 4.3389672 mm |
+| Median final XY error | 4.3763618 mm |
+| Mean maximum insertion depth | 75.4934595 mm |
+| Median maximum insertion depth | 63.3184016 mm |
+| Mean episode length | 20.8867188 policy steps |
+| Mean episodic reward | 0.3412652672 |
+| Vectorized policy steps | 97 |
+
+### Region Results
+
+| Region | Successes / episodes | Success rate |
+| --- | ---: | ---: |
+| Center | 50 / 50 | 100.0% |
+| Left | 60 / 60 | 100.0% |
+| Right | 40 / 40 | 100.0% |
+| Forward | 56 / 56 | 100.0% |
+| Backward | 50 / 50 | 100.0% |
+
+### Seed 42 vs Seed 43
+
+| Metric | Seed-42 trained eval | Seed-43 hold-out |
+| --- | ---: | ---: |
+| Successes / success rate | 256 / 100.0% | 256 / 100.0% |
+| Mean final XY error | 4.3505 mm | 4.3390 mm |
+| Mean maximum insertion depth | 73.5355 mm | 75.4935 mm |
+| Mean episode length | 20.0898 steps | 20.8867 steps |
+| Mean episodic reward | 0.3410851 | 0.3412653 |
+
+The seed-43 reset sequence remains within the same frozen v1 distribution and
+was not used for training.  This supports in-distribution hold-out behavior;
+it is not an out-of-distribution, sim-to-real, physical, or training-seed
+reproducibility claim.
+
+### Random vs Trained
+
+| Metric | Random v1 | Trained seed-42 eval | Hold-out seed-43 eval |
+| --- | ---: | ---: | ---: |
+| Successes / success rate | 0 / 128 (0.0%) | 256 / 256 (100.0%) | 256 / 256 (100.0%) |
+| Mean final XY error | 13.6548 mm | 4.3505 mm | 4.3390 mm |
+| Mean maximum insertion depth | 0.0000 mm | 73.5355 mm | 75.4935 mm |
+| Mean episode length | 239 steps | 20.0898 steps | 20.8867 steps |
+| Mean episodic reward | -0.0001485529 | 0.3410851 | 0.3412653 |
+
+Raw success counts are retained; the three evaluations are not averaged.
+
+### GUI Check
+
+After the quantitative hold-out passed, the same checkpoint was replayed with
+seed `43`, one environment, the existing Learning Lab UI, and mode
+`TRAINED PPO` for `360` steps.  The run exited `0`, observed multiple
+randomized reset offsets, and produced a `1280 × 720`, `30 fps`, `360`-frame
+(`12 s`) video:
+
+- JSON: `C:\Users\getch\AppData\Local\Temp\exp018-v1-gui-playback-seed43.json`
+- Video: `C:\Users\getch\AppData\Local\Temp\exp018-v1-gui-playback-seed43\rl-video-step-0.mp4`
+- Inspected desktop captures: `C:\Users\getch\AppData\Local\Temp\exp018-v1-gui-playback-seed43\desktop-seed43-2.png` and `C:\Users\getch\AppData\Local\Temp\exp018-v1-gui-playback-seed43\desktop-seed43-3.png`
+
+The GUI check is visual playback evidence only; the aggregate success claim is
+from the 256-episode evaluator above.
+
+### Classification
+
+`LEARNING_ESTABLISHED`
+`IN_DISTRIBUTION_HOLDOUT_VERIFIED`
 
 ## Files changed
 
