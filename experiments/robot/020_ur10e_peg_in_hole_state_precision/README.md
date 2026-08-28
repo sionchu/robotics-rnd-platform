@@ -70,6 +70,10 @@ multi-environment probe: `0/9` successes, about `46.1 mm` maximum depth and
 about `3.5 mm` final XY error).  This is a preserved diagnostic limitation,
 not a claim that an oracle solved the task.
 
+Because this semantic oracle gate did not pass, the 1,000-iteration run below
+was continued as pipeline-baseline evidence.  That is a recorded protocol
+deviation from the strict “all gates pass before training” order.
+
 ## Random baseline
 
 Command: `evaluate.py --mode random --num_envs 64 --episodes 128 --seed 42`
