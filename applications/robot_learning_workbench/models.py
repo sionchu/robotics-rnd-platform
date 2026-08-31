@@ -145,14 +145,11 @@ def normalized_to_physical(action: list[float] | tuple[float, ...], scale_m: flo
     return [float(value) * scale_m for value in action]
 
 
-def observation_term_rows(
-    observation_groups: Any, runtime_dimensions: Any
-) -> list[tuple[str, str, str, str]]:
-    """Join runtime term shapes to canonical observation metadata by group and position."""
+def observation_term_rows(observation_groups: Any) -> list[tuple[str, str, str, str]]:
+    """Render canonical observation records without reconstructing runtime semantics."""
 
     if not isinstance(observation_groups, list):
         return []
-    dimensions_by_group = runtime_dimensions if isinstance(runtime_dimensions, dict) else {}
     rows: list[tuple[str, str, str, str]] = []
     for group in observation_groups:
         if not isinstance(group, dict):
@@ -160,29 +157,51 @@ def observation_term_rows(
         terms = group.get("terms")
         if not isinstance(terms, list):
             continue
-        group_dimensions = dimensions_by_group.get(str(group.get("group")))
-        runtime_shapes = group_dimensions if isinstance(group_dimensions, list) else []
-        for index, term in enumerate(terms):
+        for term in terms:
             if not isinstance(term, dict):
                 continue
-            runtime_dimension = (
-                _shape_dimension(runtime_shapes[index]) if index < len(runtime_shapes) else None
+            dimension = term.get("dimension")
+            dimension_text = (
+                str(dimension)
+                if isinstance(dimension, int) and not isinstance(dimension, bool)
+                else "N/A — runtime probe required"
             )
-            configured_dimension = _shape_dimension(term.get("dimension"))
-            dimension = runtime_dimension if runtime_dimension is not None else configured_dimension
-            dimension_text: int | str = dimension if dimension is not None else "N/A"
-            source = str(term.get("source") or "Task Config")
-            if runtime_dimension is not None:
-                source += " + Runtime Probe"
             rows.append(
                 (
                     str(term.get("name") or "unnamed"),
                     f"dim={dimension_text}; {term.get('meaning') or ''}",
                     str(term.get("unit") or ""),
-                    source,
+                    str(term.get("dimension_source") or term.get("source") or "Task Config"),
                 )
             )
     return rows
+
+
+def observation_dimension_consistency(
+    observation_groups: Any, group_name: str, runtime_total: Any
+) -> str | None:
+    """Return a clear diagnostic when complete term dimensions disagree with runtime total."""
+
+    if not isinstance(observation_groups, list):
+        return None
+    if not isinstance(runtime_total, int) or isinstance(runtime_total, bool):
+        return None
+    group = next(
+        (item for item in observation_groups if isinstance(item, dict) and item.get("group") == group_name),
+        None,
+    )
+    if group is None or not isinstance(group.get("terms"), list):
+        return None
+    dimensions = [term.get("dimension") for term in group["terms"] if isinstance(term, dict)]
+    integer_dimensions = [
+        int(value) for value in dimensions if isinstance(value, int) and not isinstance(value, bool)
+    ]
+    if not dimensions or len(integer_dimensions) != len(dimensions):
+        return None
+    term_total = sum(integer_dimensions)
+    if term_total == runtime_total:
+        return None
+    return f"MISMATCH: observation term sum {term_total} does not equal runtime policy total {runtime_total}."
 
 
 def sha256_file(path: Path, *, chunk_size: int = 1024 * 1024) -> str:
@@ -334,21 +353,6 @@ def measured_change(series: dict[str, MetricSeries]) -> list[str]:
 
 def _optional_int(value: Any) -> int | None:
     return int(value) if isinstance(value, int | float) else None
-
-
-def _shape_dimension(value: Any) -> int | None:
-    if isinstance(value, int) and not isinstance(value, bool):
-        return value
-    if not isinstance(value, list):
-        return None
-    if not value:
-        return 1
-    if not all(isinstance(item, int) and not isinstance(item, bool) for item in value):
-        return None
-    dimension = 1
-    for item in value:
-        dimension *= item
-    return dimension
 
 
 def _optional_str(value: Any) -> str | None:

@@ -66,8 +66,8 @@ environment.
 4. Inspect configured assets by scene role, or catalog an external
    USD/URDF/MJCF path without copying it.
 5. Read Goal, Success, Observation, Action, Reward, Termination, Reset, then PPO.
-   Instantiated tasks attach runtime-probed scalar dimensions to each canonical
-   observation term while retaining the verified total observation dimension.
+   Instantiated tasks attach ObservationManager dimensions by group and term
+   name while retaining the verified total observation dimension.
 6. Preview and launch the native Isaac task GUI; record visual review manually.
 7. Preview the exact experiment-provided semantic, random, evaluation, PPO
    smoke, or full-config command before running; unavailable stages show N/A.

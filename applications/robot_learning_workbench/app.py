@@ -23,6 +23,7 @@ from .models import (
     measured_change,
     normalize_evaluation,
     normalized_to_physical,
+    observation_dimension_consistency,
     observation_term_rows,
     read_last_jsonl_record,
     session_path,
@@ -768,14 +769,23 @@ class RobotLearningWorkbench:
             rows.append(("Overall", "FALSE — no live telemetry", "", "Workbench"))
             return rows
         if section == "Observation":
-            rows = observation_term_rows(
-                self.probe_data.get("observations", []),
-                runtime.get("observation_term_dimensions", {}),
+            observation_groups = self.probe_data.get("observations", [])
+            rows = observation_term_rows(observation_groups)
+            policy_shape = runtime.get("policy_observation_shape")
+            runtime_total = (
+                policy_shape[-1]
+                if isinstance(policy_shape, list) and policy_shape and isinstance(policy_shape[-1], int)
+                else None
             )
+            diagnostic = runtime.get("observation_dimension_diagnostic")
+            if not diagnostic:
+                diagnostic = observation_dimension_consistency(observation_groups, "policy", runtime_total)
+            if diagnostic:
+                rows.append(("Dimension diagnostic", diagnostic, "", "Runtime Probe"))
             rows.append(
                 (
                     "Total",
-                    runtime.get("policy_observation_shape", [None, None])[-1],
+                    str(runtime_total) if runtime_total is not None else "N/A — runtime probe required",
                     "values",
                     "Runtime Probe",
                 )

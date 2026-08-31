@@ -4,7 +4,9 @@ import ast
 import json
 from pathlib import Path
 
+from applications.robot_learning_workbench.app import RobotLearningWorkbench
 from applications.robot_learning_workbench.discovery import discover_experiments, parse_registration
+from applications.robot_learning_workbench.isaac_probe import _attach_runtime_observation_dimensions
 from applications.robot_learning_workbench.models import (
     EvaluationResult,
     MetricSeries,
@@ -12,6 +14,7 @@ from applications.robot_learning_workbench.models import (
     explain_reward_gate,
     normalize_evaluation,
     normalized_to_physical,
+    observation_dimension_consistency,
     observation_term_rows,
     read_last_jsonl_record,
     sha256_file,
@@ -187,53 +190,117 @@ def test_metric_series_and_action_conversion() -> None:
     assert normalized_to_physical([0.2, -0.1, -0.5], 0.005) == [0.001, -0.0005, -0.0025]
 
 
-def test_observation_rows_join_runtime_dimensions_per_group() -> None:
+def test_runtime_probe_associates_observation_dimensions_by_group_and_name() -> None:
     groups = [
         {
             "group": "policy",
             "terms": [
-                {"name": name, "meaning": name, "unit": "m", "source": "Task Config"}
-                for name in ("position", "velocity", "previous_action", "depth")
+                {"name": "depth", "meaning": "depth", "unit": "m", "source": "Task Config"},
+                {"name": "position", "meaning": "position", "unit": "m", "source": "Task Config"},
             ],
         },
         {
             "group": "critic",
-            "terms": [{"name": "privileged", "meaning": "critic only", "unit": "", "source": "Task Config"}],
+            "terms": [
+                {"name": "position", "meaning": "critic position", "unit": "m", "source": "Task Config"}
+            ],
         },
     ]
+    manager = type(
+        "FakeObservationManager",
+        (),
+        {
+            "active_terms": {"policy": ["position", "depth"], "critic": ["position"]},
+            "group_obs_term_dim": {"policy": [(3,), (1,)], "critic": [(2,)]},
+        },
+    )()
 
-    rows = observation_term_rows(
-        groups,
-        {"policy": [[3], [3], [3], [1]], "critic": [[2, 3]]},
+    diagnostics = _attach_runtime_observation_dimensions(groups, manager)
+    rows = observation_term_rows(groups)
+
+    assert diagnostics == []
+    assert [row[1].split(";", 1)[0] for row in rows] == ["dim=1", "dim=3", "dim=2"]
+    assert all(row[3] == "Runtime ObservationManager" for row in rows)
+
+
+def test_observation_dimension_unavailable_without_runtime_manager_data() -> None:
+    groups = [
+        {
+            "group": "policy",
+            "terms": [
+                {
+                    "name": "unknown",
+                    "dimension": None,
+                    "meaning": "unresolved",
+                    "unit": "",
+                    "source": "Task Config",
+                }
+            ],
+        }
+    ]
+    manager = type(
+        "UnavailableObservationManager",
+        (),
+        {"active_terms": {}, "group_obs_term_dim": {}},
+    )()
+
+    diagnostics = _attach_runtime_observation_dimensions(groups, manager)
+    rows = observation_term_rows(groups)
+
+    assert diagnostics == ["Runtime observation dimensions are unavailable for group 'policy'."]
+    assert rows[0][1].startswith("dim=N/A — runtime probe required;")
+    assert rows[0][3] == "Task Config"
+
+
+def test_observation_dimension_sum_consistency() -> None:
+    groups = [
+        {
+            "group": "policy",
+            "terms": [{"dimension": dimension} for dimension in (3, 3, 3, 1)],
+        }
+    ]
+
+    assert observation_dimension_consistency(groups, "policy", 10) is None
+    assert observation_dimension_consistency(groups, "policy", 9) == (
+        "MISMATCH: observation term sum 10 does not equal runtime policy total 9."
     )
 
-    assert [row[1].split(";", 1)[0] for row in rows] == ["dim=3", "dim=3", "dim=3", "dim=1", "dim=6"]
-    assert all(row[3] == "Task Config + Runtime Probe" for row in rows)
 
-
-def test_observation_rows_preserve_config_fallback_when_runtime_shape_is_missing() -> None:
-    rows = observation_term_rows(
-        [
+def test_task_mdp_observation_rows_render_supplied_dimensions_and_total() -> None:
+    workbench = RobotLearningWorkbench.__new__(RobotLearningWorkbench)
+    workbench.probe_data = {
+        "observations": [
             {
                 "group": "policy",
                 "terms": [
                     {
-                        "name": "known",
-                        "dimension": 2,
-                        "meaning": "configured",
+                        "name": name,
+                        "dimension": dimension,
+                        "dimension_source": "Runtime ObservationManager",
+                        "meaning": name,
                         "unit": "values",
-                        "source": "Task Config",
-                    },
-                    {"name": "unknown", "meaning": "unresolved", "unit": "", "source": "Task Config"},
+                    }
+                    for name, dimension in (
+                        ("peg_pos_rel_hole", 3),
+                        ("peg_linear_velocity", 3),
+                        ("previous_action", 3),
+                        ("insertion_depth", 1),
+                    )
                 ],
             }
         ],
-        {"policy": []},
-    )
+        "runtime": {"policy_observation_shape": [1, 10]},
+    }
 
-    assert rows[0][1].startswith("dim=2;")
-    assert rows[0][3] == "Task Config"
-    assert rows[1][1].startswith("dim=N/A;")
+    rows = workbench._mdp_rows("Observation")
+
+    assert [(row[0], row[1].split(";", 1)[0]) for row in rows[:-1]] == [
+        ("peg_pos_rel_hole", "dim=3"),
+        ("peg_linear_velocity", "dim=3"),
+        ("previous_action", "dim=3"),
+        ("insertion_depth", "dim=1"),
+    ]
+    assert rows[-1] == ("Total", "10", "values", "Runtime Probe")
 
 
 def test_reward_gate_explanation_is_deterministic() -> None:
