@@ -12,6 +12,7 @@ from applications.robot_learning_workbench.models import (
     explain_reward_gate,
     normalize_evaluation,
     normalized_to_physical,
+    observation_term_rows,
     read_last_jsonl_record,
     sha256_file,
     transition_matrix,
@@ -184,6 +185,55 @@ def test_metric_series_and_action_conversion() -> None:
     )
     assert series.first_last() == (1.0, 0.25)
     assert normalized_to_physical([0.2, -0.1, -0.5], 0.005) == [0.001, -0.0005, -0.0025]
+
+
+def test_observation_rows_join_runtime_dimensions_per_group() -> None:
+    groups = [
+        {
+            "group": "policy",
+            "terms": [
+                {"name": name, "meaning": name, "unit": "m", "source": "Task Config"}
+                for name in ("position", "velocity", "previous_action", "depth")
+            ],
+        },
+        {
+            "group": "critic",
+            "terms": [{"name": "privileged", "meaning": "critic only", "unit": "", "source": "Task Config"}],
+        },
+    ]
+
+    rows = observation_term_rows(
+        groups,
+        {"policy": [[3], [3], [3], [1]], "critic": [[2, 3]]},
+    )
+
+    assert [row[1].split(";", 1)[0] for row in rows] == ["dim=3", "dim=3", "dim=3", "dim=1", "dim=6"]
+    assert all(row[3] == "Task Config + Runtime Probe" for row in rows)
+
+
+def test_observation_rows_preserve_config_fallback_when_runtime_shape_is_missing() -> None:
+    rows = observation_term_rows(
+        [
+            {
+                "group": "policy",
+                "terms": [
+                    {
+                        "name": "known",
+                        "dimension": 2,
+                        "meaning": "configured",
+                        "unit": "values",
+                        "source": "Task Config",
+                    },
+                    {"name": "unknown", "meaning": "unresolved", "unit": "", "source": "Task Config"},
+                ],
+            }
+        ],
+        {"policy": []},
+    )
+
+    assert rows[0][1].startswith("dim=2;")
+    assert rows[0][3] == "Task Config"
+    assert rows[1][1].startswith("dim=N/A;")
 
 
 def test_reward_gate_explanation_is_deterministic() -> None:
