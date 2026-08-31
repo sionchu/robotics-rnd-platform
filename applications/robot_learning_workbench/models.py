@@ -150,10 +150,17 @@ def observation_term_rows(observation_groups: Any) -> list[tuple[str, str, str, 
 
     if not isinstance(observation_groups, list):
         return []
+    populated_groups = [
+        group
+        for group in observation_groups
+        if isinstance(group, dict) and isinstance(group.get("terms"), list) and group["terms"]
+    ]
+    show_group = len(populated_groups) > 1
     rows: list[tuple[str, str, str, str]] = []
     for group in observation_groups:
         if not isinstance(group, dict):
             continue
+        group_name = str(group.get("group") or "unnamed")
         terms = group.get("terms")
         if not isinstance(terms, list):
             continue
@@ -166,9 +173,11 @@ def observation_term_rows(observation_groups: Any) -> list[tuple[str, str, str, 
                 if isinstance(dimension, int) and not isinstance(dimension, bool)
                 else "N/A — runtime probe required"
             )
+            term_name = str(term.get("name") or "unnamed")
+            display_name = f"{group_name.title()} / {term_name}" if show_group else term_name
             rows.append(
                 (
-                    str(term.get("name") or "unnamed"),
+                    display_name,
                     f"dim={dimension_text}; {term.get('meaning') or ''}",
                     str(term.get("unit") or ""),
                     str(term.get("dimension_source") or term.get("source") or "Task Config"),

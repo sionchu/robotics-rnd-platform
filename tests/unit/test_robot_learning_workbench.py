@@ -219,6 +219,11 @@ def test_runtime_probe_associates_observation_dimensions_by_group_and_name() -> 
     rows = observation_term_rows(groups)
 
     assert diagnostics == []
+    assert [row[0] for row in rows] == [
+        "Policy / depth",
+        "Policy / position",
+        "Critic / position",
+    ]
     assert [row[1].split(";", 1)[0] for row in rows] == ["dim=1", "dim=3", "dim=2"]
     assert all(row[3] == "Runtime ObservationManager" for row in rows)
 
