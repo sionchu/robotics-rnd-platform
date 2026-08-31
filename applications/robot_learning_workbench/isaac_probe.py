@@ -106,7 +106,7 @@ def _isaac_main() -> int:
             env_cfg.scene.num_envs = 1
             env = gym.make(args.task, cfg=env_cfg).unwrapped
             observations, _ = env.reset(seed=args.seed)
-            payload["runtime"] = _runtime_payload(env, observations)
+            payload["runtime"] = _runtime_payload(env, observations, payload["observations"])
         if args.mode == "gui":
             started = time.perf_counter()
             steps_run = 0
@@ -180,33 +180,111 @@ def _task_payload(args: Any, registration: Any, spec: Any, env_cfg: Any) -> dict
     }
 
 
-def _runtime_payload(env: Any, observations: Any) -> dict[str, Any]:
+def _runtime_payload(env: Any, observations: Any, observation_groups: list[dict[str, Any]]) -> dict[str, Any]:
     import torch
 
     policy = observations.get("policy") if isinstance(observations, dict) else observations
-    observation_dims: dict[str, Any] = {}
     manager = env.observation_manager
-    group_dims = getattr(manager, "group_obs_term_dim", {})
-    if isinstance(group_dims, dict):
-        observation_dims = {str(key): _json_value(value) for key, value in group_dims.items()}
+    diagnostics = _attach_runtime_observation_dimensions(observation_groups, manager)
+    policy_shape = list(policy.shape) if policy is not None and hasattr(policy, "shape") else None
+    policy_total = policy_shape[-1] if policy_shape else None
+    policy_group = next((group for group in observation_groups if group.get("group") == "policy"), None)
+    if policy_group is not None and isinstance(policy_total, int):
+        term_dimensions = [term.get("dimension") for term in policy_group.get("terms", [])]
+        if term_dimensions and all(isinstance(value, int) for value in term_dimensions):
+            term_total = sum(term_dimensions)
+            if term_total != policy_total:
+                diagnostics.append(
+                    "Observation dimension mismatch for group 'policy': "
+                    f"term sum {term_total} != runtime total {policy_total}."
+                )
     action_terms = []
     for name, term in zip(env.action_manager.active_terms, env.action_manager._terms, strict=False):
         action_terms.append({"name": name, "dimension": int(getattr(term, "action_dim", 0))})
-    return {
+    runtime = {
         "observation_space": str(env.observation_space),
         "action_space": str(env.action_space),
-        "policy_observation_shape": (
-            list(policy.shape) if policy is not None and hasattr(policy, "shape") else None
-        ),
+        "policy_observation_shape": policy_shape,
         "policy_observation_finite": (
             bool(torch.isfinite(policy).all().item()) if policy is not None else False
         ),
-        "observation_term_dimensions": observation_dims,
         "action_dimension": int(env.action_manager.total_action_dim),
         "action_terms": action_terms,
         "max_episode_length": int(env.max_episode_length),
         "step_dt_s": float(env.step_dt),
     }
+    if diagnostics:
+        runtime["observation_dimension_diagnostic"] = " ".join(diagnostics)
+    return runtime
+
+
+def _attach_runtime_observation_dimensions(
+    observation_groups: list[dict[str, Any]], manager: Any
+) -> list[str]:
+    """Attach authoritative runtime dimensions using group and term names."""
+
+    diagnostics: list[str] = []
+    active_terms = getattr(manager, "active_terms", None)
+    group_dimensions = getattr(manager, "group_obs_term_dim", None)
+    if not isinstance(active_terms, dict) or not isinstance(group_dimensions, dict):
+        return ["Runtime ObservationManager term names or dimensions are unavailable."]
+
+    for group in observation_groups:
+        group_name = str(group.get("group") or "")
+        terms = group.get("terms")
+        if not group_name or not isinstance(terms, list):
+            continue
+        runtime_names = active_terms.get(group_name)
+        runtime_shapes = group_dimensions.get(group_name)
+        if not isinstance(runtime_names, list | tuple) or not isinstance(runtime_shapes, list | tuple):
+            diagnostics.append(f"Runtime observation dimensions are unavailable for group '{group_name}'.")
+            continue
+        if len(runtime_names) != len(runtime_shapes):
+            diagnostics.append(
+                f"Runtime ObservationManager group '{group_name}' has {len(runtime_names)} names "
+                f"but {len(runtime_shapes)} dimension entries."
+            )
+            continue
+
+        named_dimensions: dict[str, int] = {}
+        for runtime_name, runtime_shape in zip(runtime_names, runtime_shapes, strict=True):
+            name = str(runtime_name)
+            dimension = _shape_dimension(runtime_shape)
+            if dimension is None:
+                diagnostics.append(
+                    f"Runtime observation dimension for '{group_name}/{name}' is not scalarizable: "
+                    f"{runtime_shape!r}."
+                )
+                continue
+            if name in named_dimensions:
+                diagnostics.append(
+                    f"Runtime ObservationManager reports duplicate term '{group_name}/{name}'."
+                )
+                continue
+            named_dimensions[name] = dimension
+
+        configured_names: set[str] = set()
+        for term in terms:
+            if not isinstance(term, dict):
+                continue
+            term_name = str(term.get("name") or "")
+            configured_names.add(term_name)
+            dimension = named_dimensions.get(term_name)
+            if dimension is None:
+                diagnostics.append(
+                    f"Runtime observation dimension is unavailable for '{group_name}/{term_name}'."
+                )
+                continue
+            term["dimension"] = dimension
+            term["dimension_source"] = "Runtime ObservationManager"
+
+        unexpected = sorted(set(named_dimensions) - configured_names)
+        if unexpected:
+            diagnostics.append(
+                f"Runtime ObservationManager group '{group_name}' has unconfigured terms: "
+                f"{', '.join(unexpected)}."
+            )
+    return diagnostics
 
 
 def _scene_assets(scene: Any) -> list[dict[str, Any]]:
@@ -503,6 +581,21 @@ def _control_dt(env_cfg: Any) -> float | None:
 
 def _number(value: Any) -> int | float | None:
     return value if isinstance(value, int | float) else None
+
+
+def _shape_dimension(value: Any) -> int | None:
+    if isinstance(value, int) and not isinstance(value, bool):
+        return value
+    if not isinstance(value, list | tuple):
+        return None
+    if not value:
+        return 1
+    if not all(isinstance(item, int) and not isinstance(item, bool) for item in value):
+        return None
+    dimension = 1
+    for item in value:
+        dimension *= item
+    return dimension
 
 
 def _json_value(value: Any) -> Any:
