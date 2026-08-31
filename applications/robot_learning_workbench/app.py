@@ -12,7 +12,7 @@ from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
 from typing import Any
 
-from .discovery import discover_experiments, find_repo_root, inspect_workspace
+from .discovery import discover_tasks, inspect_workspace, workbench_root
 from .models import (
     CommandSpec,
     EvaluationResult,
@@ -97,7 +97,8 @@ class RobotLearningWorkbench:
     def __init__(self, root: tk.Tk) -> None:
         self.root = root
         self.settings = WorkbenchSettings.load()
-        self.repo_root = self._initial_repo_root()
+        self.workbench_root = workbench_root()
+        self.workspace_root = self._initial_workspace_root()
         self.isaac_lab_root = self._initial_isaac_root()
         self.experiments: list[ExperimentSummary] = []
         self.current_experiment: ExperimentSummary | None = None
@@ -128,12 +129,11 @@ class RobotLearningWorkbench:
         self.root.after(100, self._poll_process)
         self.root.after(500, self._poll_telemetry)
 
-    def _initial_repo_root(self) -> Path:
-        configured = Path(self.settings.repo_root) if self.settings.repo_root else None
-        if configured and (configured / ".git").exists():
+    def _initial_workspace_root(self) -> Path:
+        configured = Path(self.settings.workspace_root) if self.settings.workspace_root else None
+        if configured and configured.is_dir():
             return configured
-        discovered = find_repo_root(Path.cwd())
-        return discovered or Path.cwd()
+        return Path.cwd()
 
     def _initial_isaac_root(self) -> Path | None:
         configured = Path(self.settings.isaac_lab_root) if self.settings.isaac_lab_root else None
@@ -587,8 +587,8 @@ class RobotLearningWorkbench:
         self.status_vars["process"].set("Process: IDLE")
 
     def refresh_workspace(self) -> None:
-        self.workspace = inspect_workspace(self.repo_root, self.isaac_lab_root)
-        self.experiments = discover_experiments(self.repo_root)
+        self.workspace = inspect_workspace(self.workspace_root, self.isaac_lab_root)
+        self.experiments = discover_tasks(self.workspace_root)
         self._populate_explorer()
         self._populate_workspace()
         self._populate_runs()
@@ -598,12 +598,12 @@ class RobotLearningWorkbench:
                 self.experiments[-1],
             )
             self.select_experiment(selected)
-        self._log("state", f"Workspace refreshed: {self.repo_root}")
+        self._log("state", f"Workspace refreshed: {self.workspace_root}")
 
     def _populate_explorer(self) -> None:
         self.explorer.delete(*self.explorer.get_children())
         workspace = self.explorer.insert("", "end", iid="workspace", text="Workspace", open=True)
-        self.explorer.insert(workspace, "end", text=str(self.repo_root))
+        self.explorer.insert(workspace, "end", text=str(self.workspace_root))
         self.explorer.insert("", "end", iid="assets", text="Assets", open=True)
         tasks = self.explorer.insert("", "end", iid="tasks", text="Tasks", open=True)
         experiments = self.explorer.insert("", "end", iid="experiments", text="Experiments", open=True)
@@ -621,9 +621,9 @@ class RobotLearningWorkbench:
         state = self.workspace
         rows = (
             (
-                "Repository",
+                "Workspace",
                 "OK" if not state.tracked_dirty else "WARNING",
-                state.repo_root,
+                state.workspace_root,
                 "Open Workspace...",
             ),
             (
@@ -632,6 +632,13 @@ class RobotLearningWorkbench:
                 f"{state.branch} @ {state.head[:12]}",
                 "Refresh",
             ),
+            (
+                "Trusted task code",
+                "WARNING",
+                "Workspace registration executes Python through Isaac Lab",
+                "Review workspace",
+            ),
+            ("Workbench root", "OK", self.workbench_root, "Owns helper"),
             ("Untracked", "WARNING" if state.untracked_count else "OK", state.untracked_count, "Preserved"),
             (
                 "Isaac Lab",
@@ -728,44 +735,22 @@ class RobotLearningWorkbench:
                 return [("Description", "설명 없음 — 성공 조건과 reward를 확인하세요.", "", "Workbench")]
             return [("Status", "Run Probe Task to load canonical runtime metadata.", "", "AST Discovery")]
         task = self.probe_data.get("task", {})
-        constants = self.probe_data.get("constants", {})
         runtime = self.probe_data.get("runtime", {})
         if section == "Goal":
-            observations = [
-                term.get("name")
-                for group in self.probe_data.get("observations", [])
-                for term in group.get("terms", [])
-            ]
-            if "peg_pos_rel_hole" in observations and constants.get("SUCCESS_DEPTH_M") is not None:
-                return [
-                    (
-                        "Task statement",
-                        "Align the peg with the randomized hole and insert it "
-                        "to the configured success depth.",
-                        "",
-                        "Workbench Explanation",
-                    )
-                ]
             return [("Description", "설명 없음 — 성공 조건과 reward를 확인하세요.", "", "Workbench")]
         if section == "Success":
             rows = []
             for term in self.probe_data.get("terminations", []):
-                if term.get("name") != "success":
-                    continue
-                thresholds = term.get("thresholds") or {}
-                if thresholds.get("xy_error_m_max") is not None:
-                    rows.append(
-                        ("[ ] XY Error <=", thresholds["xy_error_m_max"] * 1000, "mm", term["source"])
+                rows.append(
+                    (
+                        term["name"],
+                        f"timeout={term.get('timeout')}; {term.get('function')}",
+                        "",
+                        term["source"],
                     )
-                if thresholds.get("insertion_depth_m_min") is not None:
-                    rows.append(
-                        (
-                            "[ ] Insertion Depth >=",
-                            thresholds["insertion_depth_m_min"] * 1000,
-                            "mm",
-                            term["source"],
-                        )
-                    )
+                )
+            if not rows:
+                rows.append(("Status", "N/A — task success metadata unavailable", "", "Task Config"))
             rows.append(("Overall", "FALSE — no live telemetry", "", "Workbench"))
             return rows
         if section == "Observation":
@@ -811,7 +796,7 @@ class RobotLearningWorkbench:
                             "",
                             term["source"],
                         ),
-                        ("Scale", scale, "m per normalized action", term["source"]),
+                        ("Scale", scale, "task-defined per normalized action", term["source"]),
                         ("Relative", term.get("relative"), "", term["source"]),
                         (
                             "Body / joints",
@@ -821,16 +806,6 @@ class RobotLearningWorkbench:
                         ),
                     )
                 )
-                if isinstance(scale, int | float):
-                    physical = normalized_to_physical([0.20, -0.10, -0.50], float(scale))
-                    rows.append(
-                        (
-                            "Example [0.20,-0.10,-0.50]",
-                            [value * 1000 for value in physical],
-                            "mm",
-                            "Workbench",
-                        )
-                    )
             return rows
         if section == "Reward":
             rows = []
@@ -931,7 +906,8 @@ class RobotLearningWorkbench:
         assert self.isaac_lab_root is not None
         output = session_path("task-probe.json")
         spec = build_probe_command(
-            repo_root=self.repo_root,
+            workbench_root=self.workbench_root,
+            workspace_root=self.workspace_root,
             isaac_lab_root=self.isaac_lab_root,
             experiment=experiment,
             output_path=output,
@@ -946,7 +922,8 @@ class RobotLearningWorkbench:
         assert self.isaac_lab_root is not None
         output = session_path("gui-probe.json")
         spec = build_gui_command(
-            repo_root=self.repo_root,
+            workbench_root=self.workbench_root,
+            workspace_root=self.workspace_root,
             isaac_lab_root=self.isaac_lab_root,
             experiment=experiment,
             output_path=output,
@@ -962,7 +939,7 @@ class RobotLearningWorkbench:
         assert self.isaac_lab_root is not None
         self.iterations_var.set(iterations)
         spec = build_train_command(
-            repo_root=self.repo_root,
+            workspace_root=self.workspace_root,
             isaac_lab_root=self.isaac_lab_root,
             experiment=experiment,
             num_envs=self.envs_var.get(),
@@ -998,7 +975,7 @@ class RobotLearningWorkbench:
             return
         assert self.isaac_lab_root is not None
         spec = build_experiment_script_command(
-            repo_root=self.repo_root,
+            workspace_root=self.workspace_root,
             isaac_lab_root=self.isaac_lab_root,
             experiment=experiment,
             role="semantic",
@@ -1023,7 +1000,7 @@ class RobotLearningWorkbench:
             return
         assert self.isaac_lab_root is not None
         spec = build_experiment_script_command(
-            repo_root=self.repo_root,
+            workspace_root=self.workspace_root,
             isaac_lab_root=self.isaac_lab_root,
             experiment=experiment,
             role="random",
@@ -1061,7 +1038,7 @@ class RobotLearningWorkbench:
             return
         assert self.isaac_lab_root is not None
         spec = build_experiment_script_command(
-            repo_root=self.repo_root,
+            workspace_root=self.workspace_root,
             isaac_lab_root=self.isaac_lab_root,
             experiment=experiment,
             role="evaluate",
@@ -1142,7 +1119,7 @@ class RobotLearningWorkbench:
             return
         output = session_path("tensorboard-metrics.json")
         spec = build_metrics_command(
-            repo_root=self.repo_root,
+            workbench_root=self.workbench_root,
             isaac_lab_root=self.isaac_lab_root,
             run_dir=Path(selected),
             output_path=output,
@@ -1399,9 +1376,6 @@ class RobotLearningWorkbench:
             scale = action.get("scale")
             if isinstance(scale, int | float) and not isinstance(scale, bool):
                 return float(scale)
-        scale = (self.probe_data.get("constants") or {}).get("ACTION_SCALE_M")
-        if isinstance(scale, int | float) and not isinstance(scale, bool):
-            return float(scale)
         return None
 
     def inspect_asset(self) -> None:
@@ -1441,7 +1415,7 @@ class RobotLearningWorkbench:
                     "Isaac Sim not found", "Configure an Isaac Lab root with a resolved _isaac_sim link."
                 )
                 return
-            spec = CommandSpec("Open USD in Isaac Sim", (str(launcher), str(source)), self.repo_root)
+            spec = CommandSpec("Open USD in Isaac Sim", (str(launcher), str(source)), self.workspace_root)
             self.preview_command(spec, run=True)
             return
         if source and source.suffix.lower() in {".urdf", ".xml", ".mjcf"}:
@@ -1475,15 +1449,12 @@ class RobotLearningWorkbench:
         Path(selected).write_text("\n".join(lines), encoding="utf-8")
 
     def choose_workspace(self) -> None:
-        selected = filedialog.askdirectory(title="Select robotics-rnd-platform repository")
+        selected = filedialog.askdirectory(title="Select trusted task workspace")
         if not selected:
             return
         path = Path(selected)
-        if not (path / ".git").exists():
-            messagebox.showerror("Not a Git workspace", f"No .git directory under {path}")
-            return
-        self.repo_root = path
-        self.settings.repo_root = str(path)
+        self.workspace_root = path
+        self.settings.workspace_root = str(path)
         self.settings.save()
         self.refresh_workspace()
 
@@ -1681,7 +1652,7 @@ class RobotLearningWorkbench:
                 return
             self.runner.stop()
         self._save_note_for_current_task()
-        self.settings.repo_root = str(self.repo_root)
+        self.settings.workspace_root = str(self.workspace_root)
         self.settings.isaac_lab_root = str(self.isaac_lab_root or "")
         self.settings.window_geometry = self.root.geometry()
         self.settings.presentation_mode = self.mode_var.get()

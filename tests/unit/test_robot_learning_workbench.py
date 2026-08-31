@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 
 from applications.robot_learning_workbench.app import RobotLearningWorkbench
-from applications.robot_learning_workbench.discovery import discover_experiments, parse_registration
+from applications.robot_learning_workbench.discovery import discover_tasks, parse_registration
 from applications.robot_learning_workbench.isaac_probe import _attach_runtime_observation_dimensions
 from applications.robot_learning_workbench.models import (
     CommandSpec,
@@ -27,6 +27,7 @@ from applications.robot_learning_workbench.models import (
 from applications.robot_learning_workbench.process_runner import (
     ProcessRunner,
     build_experiment_script_command,
+    build_probe_command,
     build_train_command,
     format_command,
     format_spec,
@@ -120,7 +121,7 @@ class FixturePPORunnerCfg:
 def test_ast_discovery_does_not_execute_experiment_source(tmp_path: Path) -> None:
     folder = _experiment_fixture(tmp_path)
     metadata = parse_registration(folder / "registration.py")
-    experiments = discover_experiments(tmp_path)
+    experiments = discover_tasks(tmp_path)
 
     assert metadata["TASK_ID"] == "Fixture-Task-v0"
     assert len(experiments) == 1
@@ -133,12 +134,12 @@ def test_ast_discovery_does_not_execute_experiment_source(tmp_path: Path) -> Non
 
 
 def test_training_command_is_explicit_and_uses_external_callback(tmp_path: Path) -> None:
-    experiment = discover_experiments(tmp_path)[0] if (tmp_path / "experiments").exists() else None
+    experiment = discover_tasks(tmp_path)[0] if (tmp_path / "experiments").exists() else None
     if experiment is None:
         _experiment_fixture(tmp_path)
-        experiment = discover_experiments(tmp_path)[0]
+        experiment = discover_tasks(tmp_path)[0]
     spec = build_train_command(
-        repo_root=tmp_path,
+        workspace_root=tmp_path,
         isaac_lab_root=tmp_path / "IsaacLab",
         experiment=experiment,
         num_envs=64,
@@ -159,7 +160,7 @@ def test_training_command_is_explicit_and_uses_external_callback(tmp_path: Path)
     assert format_spec(spec).startswith(f'cd /d {tmp_path / "IsaacLab"} && set "PYTHONPATH={tmp_path}" && ')
 
     runner = build_experiment_script_command(
-        repo_root=tmp_path,
+        workspace_root=tmp_path,
         isaac_lab_root=tmp_path / "IsaacLab",
         experiment=experiment,
         role="gui",
@@ -170,14 +171,56 @@ def test_training_command_is_explicit_and_uses_external_callback(tmp_path: Path)
     assert runner.cwd == tmp_path / "IsaacLab"
 
 
+def test_manifest_workspace_is_independent_from_workbench_root(tmp_path: Path) -> None:
+    workbench_root = tmp_path / "workbench source"
+    helper = workbench_root / "applications" / "robot_learning_workbench" / "isaac_probe.py"
+    helper.parent.mkdir(parents=True)
+    helper.write_text("# workbench-owned helper\n", encoding="utf-8")
+    workspace_root = tmp_path / "trusted task workspace with spaces"
+    registration = workspace_root / "tasks" / "sample" / "registration.py"
+    registration.parent.mkdir(parents=True)
+    (workspace_root / "tasks" / "__init__.py").write_text("", encoding="utf-8")
+    (registration.parent / "__init__.py").write_text("", encoding="utf-8")
+    registration.write_text('TASK_ID = "External-Fixture-v0"\n', encoding="utf-8")
+    (workspace_root / "robot_learning_workbench_tasks.json").write_text(
+        json.dumps({"tasks": [{"name": "External fixture", "registration": "tasks/sample/registration.py"}]}),
+        encoding="utf-8",
+    )
+
+    tasks = discover_tasks(workspace_root)
+    assert len(tasks) == 1
+    assert tasks[0].registration_module == "tasks.sample.registration"
+    spec = build_probe_command(
+        workbench_root=workbench_root,
+        workspace_root=workspace_root,
+        isaac_lab_root=tmp_path / "IsaacLab",
+        experiment=tasks[0],
+        output_path=tmp_path / "probe.json",
+        device="cuda:0",
+        instantiate=False,
+    )
+
+    assert spec.argv[2] == str(helper)
+    assert (
+        str(workspace_root / "applications" / "robot_learning_workbench" / "isaac_probe.py") not in spec.argv
+    )
+    assert spec.environment == {"PYTHONPATH": str(workspace_root)}
+
+
+def test_no_task_workspace_discovers_nothing(tmp_path: Path) -> None:
+    workspace_root = tmp_path / "empty workspace"
+    workspace_root.mkdir()
+    assert discover_tasks(workspace_root) == []
+
+
 def test_settings_round_trip_stays_at_explicit_external_path(tmp_path: Path) -> None:
     path = tmp_path / "local" / "settings.json"
-    settings = WorkbenchSettings(repo_root="C:/repo", presentation_mode="engineering")
+    settings = WorkbenchSettings(workspace_root="C:/workspace", presentation_mode="engineering")
     settings.asset_catalog.append({"path": "D:/asset.usd", "type": ".usd"})
     settings.save(path)
 
     loaded = WorkbenchSettings.load(path)
-    assert loaded.repo_root == "C:/repo"
+    assert loaded.workspace_root == "C:/workspace"
     assert loaded.presentation_mode == "engineering"
     assert loaded.asset_catalog == [{"path": "D:/asset.usd", "type": ".usd"}]
 
@@ -352,7 +395,7 @@ def test_task_mdp_observation_rows_render_supplied_dimensions_and_total() -> Non
                         ("peg_pos_rel_hole", 3),
                         ("peg_linear_velocity", 3),
                         ("previous_action", 3),
-                        ("insertion_depth", 1),
+                        ("task_scalar", 1),
                     )
                 ],
             }
@@ -366,17 +409,17 @@ def test_task_mdp_observation_rows_render_supplied_dimensions_and_total() -> Non
         ("peg_pos_rel_hole", "dim=3"),
         ("peg_linear_velocity", "dim=3"),
         ("previous_action", "dim=3"),
-        ("insertion_depth", "dim=1"),
+        ("task_scalar", "dim=1"),
     ]
     assert rows[-1] == ("Total", "10", "values", "Runtime Probe")
 
 
 def test_reward_gate_explanation_is_deterministic() -> None:
     outside = explain_reward_gate(
-        reward_name="axial", xy_error_m=0.00322, gate_threshold_m=0.003, raw_value=0.0
+        reward_name="task_reward", xy_error_m=0.00322, gate_threshold_m=0.003, raw_value=0.0
     )
     inside = explain_reward_gate(
-        reward_name="axial", xy_error_m=0.002, gate_threshold_m=0.003, raw_value=0.0004
+        reward_name="task_reward", xy_error_m=0.002, gate_threshold_m=0.003, raw_value=0.0004
     )
     assert "3.22 mm" in outside and "outside" in outside
     assert "gate is ON" in inside and "+0.000400" in inside

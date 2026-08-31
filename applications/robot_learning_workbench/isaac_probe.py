@@ -132,25 +132,9 @@ def _isaac_main() -> int:
 def _task_payload(args: Any, registration: Any, spec: Any, env_cfg: Any) -> dict[str, Any]:
     play_task = getattr(registration, "PLAY_TASK_ID", None)
     kwargs = dict(spec.kwargs or {})
-    constants = {
-        name: _resolve_constant(registration, name)
-        for name in (
-            "PEG_WIDTH",
-            "PEG_LENGTH",
-            "HOLE_INNER",
-            "ACTION_SCALE_M",
-            "ALIGNMENT_GATE_M",
-            "SUCCESS_LATERAL_M",
-            "SUCCESS_DEPTH_M",
-            "RESET_XY_OFFSET_M",
-            "APPROACH_HEIGHT_M",
-            "HOLE_OFFSET_X_RANGE_M",
-            "HOLE_OFFSET_Y_RANGE_M",
-        )
-    }
     action_terms = _manager_terms(env_cfg.actions)
     observation_groups = _observation_groups(env_cfg.observations)
-    rewards = _reward_terms(env_cfg.rewards, constants)
+    rewards = _reward_terms(env_cfg.rewards)
     return {
         "schema_version": 1,
         "source": "Runtime Probe",
@@ -169,13 +153,12 @@ def _task_payload(args: Any, registration: Any, spec: Any, env_cfg: Any) -> dict
             "seed": _number(getattr(env_cfg, "seed", None)),
             "device": str(getattr(env_cfg.sim, "device", args.device or "cuda:0")),
         },
-        "constants": constants,
         "assets": _scene_assets(env_cfg.scene),
         "observations": observation_groups,
         "actions": action_terms,
         "rewards": rewards,
-        "terminations": _termination_terms(env_cfg.terminations, constants),
-        "resets": _reset_terms(env_cfg.events, constants),
+        "terminations": _termination_terms(env_cfg.terminations),
+        "resets": _reset_terms(env_cfg.events),
         "ppo": _ppo_payload(kwargs.get("rsl_rl_cfg_entry_point")),
     }
 
@@ -369,64 +352,42 @@ def _manager_terms(config: Any) -> list[dict[str, Any]]:
     return terms
 
 
-def _reward_terms(config: Any, constants: dict[str, Any]) -> list[dict[str, Any]]:
+def _reward_terms(config: Any) -> list[dict[str, Any]]:
     terms = []
     for name, cfg in _public_items(config):
         if not hasattr(cfg, "func") or not hasattr(cfg, "weight"):
             continue
-        gate = None
-        if "success_aligned_axial" in name:
-            gate = {"state": "xy_error_m", "operator": "<=", "threshold": constants["SUCCESS_LATERAL_M"]}
-        elif "axial" in name or "insertion_progress" in name:
-            gate = {"state": "xy_error_m", "operator": "<=", "threshold": constants["ALIGNMENT_GATE_M"]}
         terms.append(
             {
                 "name": name,
                 "weight": float(cfg.weight),
                 "function": _callable_name(cfg.func),
-                "gate": gate,
-                "source": "Task Config" if gate is None else "Runtime Probe",
+                "gate": None,
+                "source": "Task Config",
             }
         )
     return terms
 
 
-def _termination_terms(config: Any, constants: dict[str, Any]) -> list[dict[str, Any]]:
+def _termination_terms(config: Any) -> list[dict[str, Any]]:
     terms = []
     for name, cfg in _public_items(config):
         if not hasattr(cfg, "func"):
             continue
-        thresholds = None
-        if name == "success":
-            thresholds = {
-                "xy_error_m_max": constants["SUCCESS_LATERAL_M"],
-                "insertion_depth_m_min": constants["SUCCESS_DEPTH_M"],
-            }
         terms.append(
             {
                 "name": name,
                 "function": _callable_name(cfg.func),
                 "timeout": bool(getattr(cfg, "time_out", False)),
-                "thresholds": thresholds,
-                "source": "Runtime Probe" if thresholds else "Task Config",
+                "thresholds": None,
+                "source": "Task Config",
             }
         )
     return terms
 
 
-def _reset_terms(config: Any, constants: dict[str, Any]) -> list[dict[str, Any]]:
-    terms = []
-    ranges = {
-        "hole_x_m": constants["HOLE_OFFSET_X_RANGE_M"],
-        "hole_y_m": constants["HOLE_OFFSET_Y_RANGE_M"],
-        "peg_relative_xy_m": (
-            -constants["RESET_XY_OFFSET_M"],
-            constants["RESET_XY_OFFSET_M"],
-        )
-        if isinstance(constants["RESET_XY_OFFSET_M"], int | float)
-        else None,
-        "approach_height_m": constants["APPROACH_HEIGHT_M"],
-    }
+def _reset_terms(config: Any) -> list[dict[str, Any]]:
+    terms: list[dict[str, Any]] = []
     for name, cfg in _public_items(config):
         if not hasattr(cfg, "func"):
             continue
@@ -435,7 +396,7 @@ def _reset_terms(config: Any, constants: dict[str, Any]) -> list[dict[str, Any]]
                 "name": name,
                 "mode": getattr(cfg, "mode", None),
                 "function": _callable_name(cfg.func),
-                "ranges": ranges,
+                "ranges": {},
                 "source": "Runtime Probe",
             }
         )
@@ -477,17 +438,6 @@ def _public_items(value: Any) -> list[tuple[str, Any]]:
     return [(name, item) for name, item in items if not name.startswith("_") and item is not None]
 
 
-def _resolve_constant(module: Any, name: str) -> Any:
-    visited: set[int] = set()
-    current = module
-    while current is not None and id(current) not in visited:
-        visited.add(id(current))
-        if hasattr(current, name):
-            return _json_value(getattr(current, name))
-        current = getattr(current, "base", None)
-    return None
-
-
 def _asset_source(spawn: Any) -> str | None:
     if spawn is None:
         return None
@@ -515,14 +465,10 @@ def _asset_role(name: str) -> str:
     lowered = name.lower()
     if name == "robot":
         return "Robot"
-    if lowered == "peg":
-        return "Manipulated Object"
     if "contact" in lowered or "sensor" in lowered:
         return "Sensor"
     if "marker" in lowered:
         return "Marker"
-    if any(token in lowered for token in ("plate", "wall", "fixture")):
-        return "Fixture"
     return "Scene"
 
 
@@ -538,13 +484,7 @@ def _observation_unit(name: str) -> str:
 
 
 def _observation_meaning(name: str) -> str:
-    meanings = {
-        "peg_pos_rel_hole": "Peg position relative to the current hole target.",
-        "peg_linear_velocity": "Current peg linear velocity.",
-        "previous_action": "Policy action applied on the previous control step.",
-        "insertion_depth": "Current axial insertion depth below the hole top.",
-    }
-    return meanings.get(name, "No workbench explanation is registered for this term.")
+    return "Task metadata does not provide a workbench explanation for this term."
 
 
 def _callable_name(value: Any) -> str:

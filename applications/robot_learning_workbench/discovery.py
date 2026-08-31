@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ast
+import json
 import re
 import subprocess
 from pathlib import Path
@@ -11,6 +12,7 @@ from typing import Any
 from .models import ExperimentSummary, WorkspaceState
 
 EXPERIMENT_PATTERN = re.compile(r"^(?P<number>\d{3})_(?P<name>.+)$")
+WORKSPACE_MANIFEST = "robot_learning_workbench_tasks.json"
 SCRIPT_NAMES = {
     "prekit": "prekit_check.py",
     "gui": "gui_probe.py",
@@ -20,10 +22,25 @@ SCRIPT_NAMES = {
 }
 
 
-def discover_experiments(repo_root: Path) -> list[ExperimentSummary]:
-    """Find registered robot experiments through source parsing only."""
+def discover_tasks(workspace_root: Path) -> list[ExperimentSummary]:
+    """Discover trusted workspace task metadata without importing task code.
 
-    root = repo_root / "experiments" / "robot"
+    A standalone workspace may declare registrations in
+    ``robot_learning_workbench_tasks.json``.  The legacy robotics-rnd
+    ``experiments/robot/<number>_<name>/registration.py`` layout remains a
+    workspace-local discovery adapter, not a Workbench requirement.
+    """
+
+    discovered = _discover_manifest_tasks(workspace_root)
+    discovered.extend(_discover_legacy_robot_experiments(workspace_root))
+    unique = {item.registration_path.resolve(): item for item in discovered}
+    return sorted(unique.values(), key=lambda item: (item.number, item.name, str(item.path)))
+
+
+def _discover_legacy_robot_experiments(workspace_root: Path) -> list[ExperimentSummary]:
+    """Support the existing robotics-rnd experiment layout when present."""
+
+    root = workspace_root / "experiments" / "robot"
     if not root.is_dir():
         return []
     discovered: list[ExperimentSummary] = []
@@ -33,7 +50,7 @@ def discover_experiments(repo_root: Path) -> list[ExperimentSummary]:
         if not match or not registration.is_file():
             continue
         metadata = parse_registration(registration)
-        module = ".".join(registration.relative_to(repo_root).with_suffix("").parts)
+        module = _module_name(workspace_root, registration)
         scripts = {
             role: candidate
             for role, filename in SCRIPT_NAMES.items()
@@ -46,6 +63,58 @@ def discover_experiments(repo_root: Path) -> list[ExperimentSummary]:
                 path=folder,
                 registration_path=registration,
                 registration_module=module,
+                task_id=_string(metadata.get("TASK_ID")),
+                play_task_id=_string(metadata.get("PLAY_TASK_ID")),
+                runtime_module=_string(metadata.get("RUNTIME_MODULE")),
+                env_config_class=_string(metadata.get("env_config_class")),
+                play_config_class=_string(metadata.get("play_config_class")),
+                ppo_config_class=_string(metadata.get("ppo_config_class")),
+                scripts=scripts,
+            )
+        )
+    return discovered
+
+
+def _discover_manifest_tasks(workspace_root: Path) -> list[ExperimentSummary]:
+    manifest = workspace_root / WORKSPACE_MANIFEST
+    if not manifest.is_file():
+        return []
+    try:
+        payload = json.loads(manifest.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return []
+    entries = payload.get("tasks") if isinstance(payload, dict) else None
+    if not isinstance(entries, list):
+        return []
+    discovered: list[ExperimentSummary] = []
+    for index, entry in enumerate(entries, start=1):
+        if not isinstance(entry, dict) or not isinstance(entry.get("registration"), str):
+            continue
+        registration = _workspace_file(workspace_root, entry["registration"])
+        if registration is None or not registration.is_file() or registration.suffix != ".py":
+            continue
+        metadata = parse_registration(registration)
+        command_paths = entry.get("commands")
+        scripts = (
+            {
+                role: path
+                for role, relative in command_paths.items()
+                if role in SCRIPT_NAMES
+                and isinstance(relative, str)
+                and (path := _workspace_file(workspace_root, relative)) is not None
+                and path.is_file()
+            }
+            if isinstance(command_paths, dict)
+            else {}
+        )
+        number = entry.get("number")
+        discovered.append(
+            ExperimentSummary(
+                number=number if isinstance(number, int) and not isinstance(number, bool) else index,
+                name=str(entry.get("name") or registration.parent.name.replace("_", " ")),
+                path=registration.parent,
+                registration_path=registration,
+                registration_module=_module_name(workspace_root, registration),
                 task_id=_string(metadata.get("TASK_ID")),
                 play_task_id=_string(metadata.get("PLAY_TASK_ID")),
                 runtime_module=_string(metadata.get("RUNTIME_MODULE")),
@@ -86,10 +155,10 @@ def parse_registration(path: Path) -> dict[str, Any]:
     return result
 
 
-def inspect_workspace(repo_root: Path, isaac_lab_root: Path | None) -> WorkspaceState:
-    status_lines = _git(repo_root, "status", "--porcelain").splitlines()
-    branch = _git(repo_root, "branch", "--show-current") or "DETACHED"
-    head = _git(repo_root, "rev-parse", "HEAD")
+def inspect_workspace(workspace_root: Path, isaac_lab_root: Path | None) -> WorkspaceState:
+    status_lines = _git(workspace_root, "status", "--porcelain").splitlines()
+    branch = _git(workspace_root, "branch", "--show-current") or "DETACHED"
+    head = _git(workspace_root, "rev-parse", "HEAD")
     tracked_dirty = any(not line.startswith("??") for line in status_lines)
     untracked_count = sum(line.startswith("??") for line in status_lines)
     isaac_commit = None
@@ -103,7 +172,7 @@ def inspect_workspace(repo_root: Path, isaac_lab_root: Path | None) -> Workspace
             except OSError:
                 isaac_sim_path = None
     return WorkspaceState(
-        repo_root=repo_root,
+        workspace_root=workspace_root,
         branch=branch,
         head=head,
         tracked_dirty=tracked_dirty,
@@ -144,9 +213,24 @@ def find_latest_run(isaac_lab_root: Path | None) -> Path | None:
     return max(candidates, key=lambda path: path.stat().st_mtime) if candidates else None
 
 
-def find_repo_root(start: Path) -> Path | None:
-    output = _git(start, "rev-parse", "--show-toplevel")
-    return Path(output) if output else None
+def workbench_root() -> Path:
+    """Return the source/install root that owns the Workbench helper."""
+
+    return Path(__file__).resolve().parents[2]
+
+
+def _module_name(workspace_root: Path, registration: Path) -> str:
+    return ".".join(registration.relative_to(workspace_root).with_suffix("").parts)
+
+
+def _workspace_file(workspace_root: Path, relative: str) -> Path | None:
+    root = workspace_root.resolve()
+    candidate = (root / relative).resolve()
+    try:
+        candidate.relative_to(root)
+    except ValueError:
+        return None
+    return candidate
 
 
 def _git(cwd: Path, *args: str) -> str:

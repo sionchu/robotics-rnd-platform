@@ -1,30 +1,34 @@
 # Robot Learning Workbench
 
 Robot Learning Workbench is a dependency-light Windows desktop application for
-understanding and operating this repository's evidence-first robot-learning
-workflow. It is a thin orchestration and teaching layer over canonical
-experiments and an existing external Isaac Lab installation. It is not an RL
-framework, task editor, or Isaac Sim replacement.
+understanding and operating trusted local robot-learning tasks. It is a thin
+orchestration and teaching layer over a task workspace and an existing external
+Isaac Lab installation. It is not an RL framework, task editor, or Isaac Sim
+replacement.
 
 ## Architecture boundary
 
 ```text
-tkinter desktop process (standard library only)
+WORKBENCH_ROOT: tkinter desktop process (standard library only)
         |
-        | exact cwd/env/argv + subprocess + explicit JSON output
+        | helper path + exact cwd/env/argv + subprocess + explicit JSON output
         v
 isaac_probe.py through isaaclab.bat
+        |
+WORKSPACE_ROOT: registration module, task source, optional task commands
         |
         +-- Isaac Lab / Isaac Sim task configuration
         +-- native Isaac GUI
         +-- existing TensorBoard event reader
 ```
 
-The desktop process never imports Isaac Lab, Omni, USD, Torch, RSL-RL, or
-TensorBoard. Machine paths and local experiment notes are stored under:
+The three roots are independent: `WORKBENCH_ROOT` owns the application and its
+helper, `WORKSPACE_ROOT` owns task code, and `ISAACLAB_ROOT` owns the simulator
+runtime. The desktop process never imports Isaac Lab, Omni, USD, Torch, RSL-RL,
+or TensorBoard. Machine paths and local task notes are stored under:
 
 ```text
-%LOCALAPPDATA%\robotics-rnd-platform\robot-learning-workbench\settings.json
+%LOCALAPPDATA%\robot-learning-workbench\settings.json
 ```
 
 No workstation path is written to repository files.
@@ -37,9 +41,30 @@ From the repository root using its normal Python environment:
 .\.venv\Scripts\python.exe -m applications.robot_learning_workbench
 ```
 
-Use **File > Open Workspace** and **File > Configure Isaac Lab** if the detected
-locations are not correct. The application never installs or repairs either
-environment.
+Use **File > Open Workspace** to select trusted local task code and **File >
+Configure Isaac Lab** to select an existing runtime. The application never
+installs or repairs either environment.
+
+## Trusted workspace contract
+
+The Workbench only imports a registration module when you explicitly probe or
+launch a task. A workspace is therefore trusted local code, not a sandbox.
+
+Existing robotics-rnd workspaces may use:
+
+```text
+experiments/robot/<number>_<name>/registration.py
+```
+
+Standalone workspaces may instead contain `robot_learning_workbench_tasks.json`:
+
+```json
+{"tasks": [{"registration": "tasks/example/registration.py", "name": "Example"}]}
+```
+
+Each registration defines `TASK_ID`, optionally `PLAY_TASK_ID`, and may expose
+task-local command scripts through the manifest. A workspace with neither form
+opens normally and reports no discoverable tasks.
 
 ## Screen layout
 
@@ -79,10 +104,10 @@ environment.
 
 Guided Mode adds Korean practical explanations to the same probed data shown in
 Engineering Mode. Engineering Mode exposes task IDs, source modules, config
-classes, constants, paths, raw metric names, and exact commands.
+classes, paths, raw metric names, and exact commands.
 
 Isaac commands run with the Isaac Lab checkout as their working directory and
-an explicit repository `PYTHONPATH`, so generated training artifacts stay under
+an explicit workspace `PYTHONPATH`, so generated training artifacts stay under
 the external Isaac Lab run tree rather than the repository.
 
 ## Deliberate exclusions

@@ -32,7 +32,7 @@ class ExperimentSummary:
 
 @dataclass(frozen=True)
 class WorkspaceState:
-    repo_root: Path
+    workspace_root: Path
     branch: str
     head: str
     tracked_dirty: bool
@@ -93,7 +93,7 @@ class EvaluationResult:
 
 @dataclass
 class WorkbenchSettings:
-    repo_root: str = ""
+    workspace_root: str = ""
     isaac_lab_root: str = ""
     selected_experiment: str = ""
     selected_task: str = ""
@@ -130,7 +130,7 @@ def settings_path() -> Path:
 
     local = os.environ.get("LOCALAPPDATA")
     base = Path(local) if local else Path.home() / "AppData" / "Local"
-    return base / "robotics-rnd-platform" / APP_DIR_NAME / "settings.json"
+    return base / APP_DIR_NAME / "settings.json"
 
 
 def session_path(name: str) -> Path:
@@ -281,22 +281,10 @@ def normalize_evaluation(path: Path) -> EvaluationResult:
     if not taxonomy_raw and isinstance(raw.get("standard_failure_categories"), dict):
         taxonomy_raw = raw["standard_failure_categories"]
     metrics: dict[str, float | int | str | None] = {}
-    metric_keys = (
-        "success_rate",
-        "mean_final_xy_error_mm",
-        "median_final_xy_error_mm",
-        "mean_max_insertion_depth_mm",
-        "median_max_insertion_depth_mm",
-        "mean_episode_length",
-        "mean_episodic_reward",
-        "mean_max_contact_force_n",
-        "max_contact_force_n",
-    )
-    for key in metric_keys:
-        if key not in raw:
-            continue
-        value = raw[key]
-        if isinstance(value, int | float | str) or value is None:
+    for key, value in raw.items():
+        if (key.startswith(("mean_", "median_", "max_")) or key == "success_rate") and (
+            isinstance(value, int | float | str) or value is None
+        ):
             metrics[key] = value
     episodes = _optional_int(raw.get("episodes") or raw.get("completed_episodes"))
     successes = _optional_int(raw.get("successes"))
@@ -354,9 +342,6 @@ def measured_change(series: dict[str, MetricSeries]) -> list[str]:
             first, last = metric.first_last()
             if first is not None and last is not None:
                 statements.append(f"{label} changed from {first:.4g} to {last:.4g}.")
-    axial = next((value for key, value in series.items() if "axial" in key.lower()), None)
-    if axial and any(value != 0.0 for _, value in axial.points):
-        statements.append("An axial reward metric is non-zero in the loaded interval.")
     return statements
 
 

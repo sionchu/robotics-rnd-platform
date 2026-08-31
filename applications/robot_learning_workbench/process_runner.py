@@ -31,7 +31,8 @@ def format_spec(spec: CommandSpec) -> str:
 
 def build_probe_command(
     *,
-    repo_root: Path,
+    workbench_root: Path,
+    workspace_root: Path,
     isaac_lab_root: Path,
     experiment: ExperimentSummary,
     output_path: Path,
@@ -41,7 +42,7 @@ def build_probe_command(
     argv = [
         str(isaac_lab_root / "isaaclab.bat"),
         "-p",
-        str(repo_root / "applications" / "robot_learning_workbench" / "isaac_probe.py"),
+        str(workbench_root / "applications" / "robot_learning_workbench" / "isaac_probe.py"),
         "--mode",
         "task",
         "--registration",
@@ -56,12 +57,15 @@ def build_probe_command(
     ]
     if instantiate:
         argv.append("--instantiate")
-    return CommandSpec("Task Probe", tuple(argv), isaac_lab_root, output_path, {"PYTHONPATH": str(repo_root)})
+    return CommandSpec(
+        "Task Probe", tuple(argv), isaac_lab_root, output_path, {"PYTHONPATH": str(workspace_root)}
+    )
 
 
 def build_gui_command(
     *,
-    repo_root: Path,
+    workbench_root: Path,
+    workspace_root: Path,
     isaac_lab_root: Path,
     experiment: ExperimentSummary,
     output_path: Path,
@@ -72,7 +76,7 @@ def build_gui_command(
     argv = (
         str(isaac_lab_root / "isaaclab.bat"),
         "-p",
-        str(repo_root / "applications" / "robot_learning_workbench" / "isaac_probe.py"),
+        str(workbench_root / "applications" / "robot_learning_workbench" / "isaac_probe.py"),
         "--mode",
         "gui",
         "--registration",
@@ -90,12 +94,14 @@ def build_gui_command(
         "--viz",
         "kit",
     )
-    return CommandSpec("Launch Task GUI", argv, isaac_lab_root, output_path, {"PYTHONPATH": str(repo_root)})
+    return CommandSpec(
+        "Launch Task GUI", argv, isaac_lab_root, output_path, {"PYTHONPATH": str(workspace_root)}
+    )
 
 
 def build_train_command(
     *,
-    repo_root: Path,
+    workspace_root: Path,
     isaac_lab_root: Path,
     experiment: ExperimentSummary,
     num_envs: int,
@@ -135,17 +141,17 @@ def build_train_command(
         f"PPO {iterations} iterations",
         tuple(argv),
         isaac_lab_root,
-        environment={"PYTHONPATH": str(repo_root)},
+        environment={"PYTHONPATH": str(workspace_root)},
     )
 
 
 def build_metrics_command(
-    *, repo_root: Path, isaac_lab_root: Path, run_dir: Path, output_path: Path
+    *, workbench_root: Path, isaac_lab_root: Path, run_dir: Path, output_path: Path
 ) -> CommandSpec:
     argv = (
         str(isaac_lab_root / "isaaclab.bat"),
         "-p",
-        str(repo_root / "applications" / "robot_learning_workbench" / "isaac_probe.py"),
+        str(workbench_root / "applications" / "robot_learning_workbench" / "isaac_probe.py"),
         "--mode",
         "metrics",
         "--run-dir",
@@ -158,7 +164,7 @@ def build_metrics_command(
 
 def build_experiment_script_command(
     *,
-    repo_root: Path,
+    workspace_root: Path,
     isaac_lab_root: Path,
     experiment: ExperimentSummary,
     role: str,
@@ -171,7 +177,7 @@ def build_experiment_script_command(
         role.replace("_", " ").title(),
         (str(isaac_lab_root / "isaaclab.bat"), "-p", str(script), *arguments),
         isaac_lab_root,
-        environment={"PYTHONPATH": str(repo_root)},
+        environment={"PYTHONPATH": str(workspace_root)},
     )
 
 
