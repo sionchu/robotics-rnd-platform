@@ -63,14 +63,16 @@ environment.
 1. Inspect workspace and external runtime readiness.
 2. Select an AST-discovered experiment and task.
 3. Run the external task probe to load canonical scene and MDP metadata.
-4. Inspect configured assets or catalog an external USD/URDF/MJCF path without
-   copying it.
+4. Inspect configured assets by scene role, or catalog an external
+   USD/URDF/MJCF path without copying it.
 5. Read Goal, Success, Observation, Action, Reward, Termination, Reset, then PPO.
 6. Preview and launch the native Isaac task GUI; record visual review manually.
 7. Preview the exact experiment-provided semantic, random, evaluation, PPO
    smoke, or full-config command before running; unavailable stages show N/A.
 8. Read existing TensorBoard scalar files through the external helper.
-9. Open evaluation JSON files and compare metrics, stable episode IDs, regions,
+9. Optionally tail a single-environment JSONL file to inspect state, action,
+   physical action scale, reward gates, success, and episode values.
+10. Open evaluation JSON files and compare metrics, stable episode IDs, regions,
    and experiment-provided failure taxonomy.
 
 Guided Mode adds Korean practical explanations to the same probed data shown in

@@ -155,6 +155,30 @@ def sha256_file(path: Path, *, chunk_size: int = 1024 * 1024) -> str:
     return digest.hexdigest().upper()
 
 
+def read_last_jsonl_record(path: Path, *, max_bytes: int = 64 * 1024) -> dict[str, Any] | None:
+    """Read the latest complete JSON object from a bounded tail of a telemetry file."""
+
+    try:
+        with path.open("rb") as stream:
+            size = stream.seek(0, os.SEEK_END)
+            start = max(size - max_bytes, 0)
+            stream.seek(start)
+            data = stream.read().decode("utf-8", errors="replace")
+    except OSError:
+        return None
+    lines = data.splitlines()
+    if start and lines:
+        lines = lines[1:]
+    for line in reversed(lines):
+        try:
+            value = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(value, dict):
+            return value
+    return None
+
+
 def explain_reward_gate(
     *,
     reward_name: str,
