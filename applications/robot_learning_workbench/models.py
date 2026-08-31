@@ -145,6 +145,46 @@ def normalized_to_physical(action: list[float] | tuple[float, ...], scale_m: flo
     return [float(value) * scale_m for value in action]
 
 
+def observation_term_rows(
+    observation_groups: Any, runtime_dimensions: Any
+) -> list[tuple[str, str, str, str]]:
+    """Join runtime term shapes to canonical observation metadata by group and position."""
+
+    if not isinstance(observation_groups, list):
+        return []
+    dimensions_by_group = runtime_dimensions if isinstance(runtime_dimensions, dict) else {}
+    rows: list[tuple[str, str, str, str]] = []
+    for group in observation_groups:
+        if not isinstance(group, dict):
+            continue
+        terms = group.get("terms")
+        if not isinstance(terms, list):
+            continue
+        group_dimensions = dimensions_by_group.get(str(group.get("group")))
+        runtime_shapes = group_dimensions if isinstance(group_dimensions, list) else []
+        for index, term in enumerate(terms):
+            if not isinstance(term, dict):
+                continue
+            runtime_dimension = (
+                _shape_dimension(runtime_shapes[index]) if index < len(runtime_shapes) else None
+            )
+            configured_dimension = _shape_dimension(term.get("dimension"))
+            dimension = runtime_dimension if runtime_dimension is not None else configured_dimension
+            dimension_text: int | str = dimension if dimension is not None else "N/A"
+            source = str(term.get("source") or "Task Config")
+            if runtime_dimension is not None:
+                source += " + Runtime Probe"
+            rows.append(
+                (
+                    str(term.get("name") or "unnamed"),
+                    f"dim={dimension_text}; {term.get('meaning') or ''}",
+                    str(term.get("unit") or ""),
+                    source,
+                )
+            )
+    return rows
+
+
 def sha256_file(path: Path, *, chunk_size: int = 1024 * 1024) -> str:
     """Calculate a checkpoint hash without loading the whole artifact into memory."""
 
@@ -294,6 +334,21 @@ def measured_change(series: dict[str, MetricSeries]) -> list[str]:
 
 def _optional_int(value: Any) -> int | None:
     return int(value) if isinstance(value, int | float) else None
+
+
+def _shape_dimension(value: Any) -> int | None:
+    if isinstance(value, int) and not isinstance(value, bool):
+        return value
+    if not isinstance(value, list):
+        return None
+    if not value:
+        return 1
+    if not all(isinstance(item, int) and not isinstance(item, bool) for item in value):
+        return None
+    dimension = 1
+    for item in value:
+        dimension *= item
+    return dimension
 
 
 def _optional_str(value: Any) -> str | None:

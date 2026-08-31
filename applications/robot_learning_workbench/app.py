@@ -23,6 +23,7 @@ from .models import (
     measured_change,
     normalize_evaluation,
     normalized_to_physical,
+    observation_term_rows,
     read_last_jsonl_record,
     session_path,
     sha256_file,
@@ -767,18 +768,10 @@ class RobotLearningWorkbench:
             rows.append(("Overall", "FALSE — no live telemetry", "", "Workbench"))
             return rows
         if section == "Observation":
-            rows = []
-            dims = runtime.get("observation_term_dimensions", {}).get("policy", [])
-            term_index = 0
-            for group in self.probe_data.get("observations", []):
-                for term in group.get("terms", []):
-                    dimension = dims[term_index] if term_index < len(dims) else term.get("dimension")
-                    if isinstance(dimension, list) and len(dimension) == 1:
-                        dimension = dimension[0]
-                    rows.append(
-                        (term["name"], f"dim={dimension}; {term['meaning']}", term["unit"], term["source"])
-                    )
-                    term_index += 1
+            rows = observation_term_rows(
+                self.probe_data.get("observations", []),
+                runtime.get("observation_term_dimensions", {}),
+            )
             rows.append(
                 (
                     "Total",
