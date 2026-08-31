@@ -2,12 +2,16 @@ from __future__ import annotations
 
 import ast
 import json
+import os
 from pathlib import Path
+
+import pytest
 
 from applications.robot_learning_workbench.app import RobotLearningWorkbench
 from applications.robot_learning_workbench.discovery import discover_experiments, parse_registration
 from applications.robot_learning_workbench.isaac_probe import _attach_runtime_observation_dimensions
 from applications.robot_learning_workbench.models import (
+    CommandSpec,
     EvaluationResult,
     MetricSeries,
     WorkbenchSettings,
@@ -21,11 +25,70 @@ from applications.robot_learning_workbench.models import (
     transition_matrix,
 )
 from applications.robot_learning_workbench.process_runner import (
+    ProcessRunner,
     build_experiment_script_command,
     build_train_command,
     format_command,
     format_spec,
 )
+
+
+@pytest.mark.skipif(os.name != "nt", reason="Windows cmd.exe batch argument contract")
+def test_windows_batch_transport_preserves_literal_arguments(tmp_path: Path) -> None:
+    batch_dir = tmp_path / "batch path with spaces"
+    batch_dir.mkdir()
+    batch = batch_dir / "record arguments.cmd"
+    received_path = batch_dir / "received.txt"
+    sentinel = tmp_path / "sentinel.txt"
+    expected = [
+        "plain",
+        "SAFE VALUE",
+        "SAFE&VALUE",
+        "SAFE|VALUE",
+        "SAFE^VALUE",
+        "SAFE%VALUE",
+        "SAFE!VALUE",
+        "SAFE(VALUE)",
+        "SAFE<VALUE",
+        "SAFE>VALUE",
+        r"C:\Program Files\Robot Lab\asset.usd",
+        "SAFE&echo.INJECTED>sentinel.txt",
+        "TAIL",
+    ]
+    lines = [
+        "@echo off",
+        "setlocal DisableDelayedExpansion",
+        'set "RLW_OUTPUT=%~dp0received.txt"',
+    ]
+    for index in range(len(expected)):
+        lines.extend((f'set "RLW_CAPTURE_{index}=%~1"', "shift"))
+    lines.append('> "%RLW_OUTPUT%" set RLW_CAPTURE_')
+    batch.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+    runner = ProcessRunner()
+    runner.start(CommandSpec("batch boundary", (str(batch), *expected), tmp_path))
+    assert runner.process is not None
+    assert runner.process.wait(timeout=10) == 0
+
+    received = {}
+    for line in received_path.read_text(encoding="utf-8").splitlines():
+        name, separator, value = line.partition("=")
+        if separator:
+            received[int(name.removeprefix("RLW_CAPTURE_"))] = value
+    assert [received[index] for index in range(len(expected))] == expected
+    assert not sentinel.exists()
+
+
+@pytest.mark.skipif(os.name != "nt", reason="Windows cmd.exe batch argument contract")
+@pytest.mark.parametrize("value", ['SAFE"VALUE', "SAFE\rVALUE", "SAFE\nVALUE", "SAFE\0VALUE"])
+def test_windows_batch_transport_rejects_unrepresentable_values(tmp_path: Path, value: str) -> None:
+    batch = tmp_path / "must-not-run.cmd"
+    batch.write_text("@echo off\nexit /b 0\n", encoding="utf-8")
+    runner = ProcessRunner()
+
+    with pytest.raises(RuntimeError, match="cannot contain"):
+        runner.start(CommandSpec("invalid batch argument", (str(batch), value), tmp_path))
+    assert runner.process is None
 
 
 def _experiment_fixture(tmp_path: Path) -> Path:

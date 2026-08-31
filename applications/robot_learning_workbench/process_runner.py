@@ -198,10 +198,10 @@ class ProcessRunner:
         with self._lock:
             if self.process is not None and self.process.poll() is None:
                 raise RuntimeError("A workbench process is already running.")
-            command = self._windows_command(spec.argv)
-            creation_flags = subprocess.CREATE_NEW_PROCESS_GROUP if os.name == "nt" else 0
             environment = os.environ.copy()
             environment.update(spec.environment)
+            command = self._windows_command(spec.argv, environment)
+            creation_flags = subprocess.CREATE_NEW_PROCESS_GROUP if os.name == "nt" else 0
             self.process = subprocess.Popen(
                 command,
                 cwd=spec.cwd,
@@ -255,7 +255,27 @@ class ProcessRunner:
             self.on_complete(spec, exit_code)
 
     @staticmethod
-    def _windows_command(argv: tuple[str, ...]) -> list[str]:
+    def _windows_command(argv: tuple[str, ...], environment: dict[str, str]) -> str | list[str]:
+        """Keep dynamic batch arguments out of cmd.exe's command text."""
+
         if os.name == "nt" and argv and argv[0].lower().endswith((".bat", ".cmd")):
-            return ["cmd.exe", "/d", "/s", "/c", subprocess.list2cmdline(list(argv))]
+            unsupported = ('"', "\r", "\n", "\0")
+            if any(character in value for value in argv for character in unsupported):
+                raise RuntimeError(
+                    "Windows batch arguments cannot contain double quotes, line breaks, or NUL bytes."
+                )
+
+            target_name = "ROBOT_LEARNING_WORKBENCH_BATCH_TARGET"
+            environment[target_name] = argv[0]
+            argument_names = []
+            for index, value in enumerate(argv[1:]):
+                name = f"ROBOT_LEARNING_WORKBENCH_BATCH_ARG_{index}"
+                environment[name] = value
+                argument_names.append(name)
+
+            arguments = " ".join(f'"%{name}%"' for name in argument_names)
+            command = f'cmd.exe /d /s /v:off /c ""%{target_name}%"'
+            if arguments:
+                command += f" {arguments}"
+            return command + '"'
         return list(argv)
