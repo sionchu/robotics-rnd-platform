@@ -9,15 +9,16 @@ import pytest
 
 from applications.robot_learning_workbench.app import RobotLearningWorkbench
 from applications.robot_learning_workbench.discovery import discover_tasks, parse_registration
-from applications.robot_learning_workbench.isaac_probe import _attach_runtime_observation_dimensions
+from applications.robot_learning_workbench.isaac_probe import (
+    _attach_runtime_observation_dimensions,
+    _observation_unit,
+)
 from applications.robot_learning_workbench.models import (
     CommandSpec,
     EvaluationResult,
     MetricSeries,
     WorkbenchSettings,
-    explain_reward_gate,
     normalize_evaluation,
-    normalized_to_physical,
     observation_dimension_consistency,
     observation_term_rows,
     read_last_jsonl_record,
@@ -288,12 +289,17 @@ def test_transition_matrix_uses_only_shared_stable_ids(tmp_path: Path) -> None:
     assert sum(transition_matrix(empty, other).values()) == 0
 
 
-def test_metric_series_and_action_conversion() -> None:
+def test_metric_series_keeps_raw_values() -> None:
     series = MetricSeries.from_json(
         "Policy/mean_std", [{"step": 0, "value": 1.0}, {"step": 10, "value": 0.25}]
     )
     assert series.first_last() == (1.0, 0.25)
-    assert normalized_to_physical([0.2, -0.1, -0.5], 0.005) == [0.001, -0.0005, -0.0025]
+
+
+def test_unknown_observation_units_are_task_defined() -> None:
+    assert _observation_unit() == "task-defined"
+    assert _observation_unit() != "m"
+    assert _observation_unit() != "m/s"
 
 
 def test_runtime_probe_associates_observation_dimensions_by_group_and_name() -> None:
@@ -301,14 +307,29 @@ def test_runtime_probe_associates_observation_dimensions_by_group_and_name() -> 
         {
             "group": "policy",
             "terms": [
-                {"name": "depth", "meaning": "depth", "unit": "m", "source": "Task Config"},
-                {"name": "position", "meaning": "position", "unit": "m", "source": "Task Config"},
+                {
+                    "name": "joint_pos",
+                    "meaning": "joint position",
+                    "unit": "task-defined",
+                    "source": "Task Config",
+                },
+                {
+                    "name": "joint_vel",
+                    "meaning": "joint velocity",
+                    "unit": "task-defined",
+                    "source": "Task Config",
+                },
             ],
         },
         {
             "group": "critic",
             "terms": [
-                {"name": "position", "meaning": "critic position", "unit": "m", "source": "Task Config"}
+                {
+                    "name": "joint_pos",
+                    "meaning": "critic joint position",
+                    "unit": "task-defined",
+                    "source": "Task Config",
+                }
             ],
         },
     ]
@@ -316,7 +337,7 @@ def test_runtime_probe_associates_observation_dimensions_by_group_and_name() -> 
         "FakeObservationManager",
         (),
         {
-            "active_terms": {"policy": ["position", "depth"], "critic": ["position"]},
+            "active_terms": {"policy": ["joint_vel", "joint_pos"], "critic": ["joint_pos"]},
             "group_obs_term_dim": {"policy": [(3,), (1,)], "critic": [(2,)]},
         },
     )()
@@ -326,11 +347,12 @@ def test_runtime_probe_associates_observation_dimensions_by_group_and_name() -> 
 
     assert diagnostics == []
     assert [row[0] for row in rows] == [
-        "Policy / depth",
-        "Policy / position",
-        "Critic / position",
+        "Policy / joint_pos",
+        "Policy / joint_vel",
+        "Critic / joint_pos",
     ]
     assert [row[1].split(";", 1)[0] for row in rows] == ["dim=1", "dim=3", "dim=2"]
+    assert all(row[2] == "task-defined" for row in rows)
     assert all(row[3] == "Runtime ObservationManager" for row in rows)
 
 
@@ -392,8 +414,8 @@ def test_task_mdp_observation_rows_render_supplied_dimensions_and_total() -> Non
                         "unit": "values",
                     }
                     for name, dimension in (
-                        ("peg_pos_rel_hole", 3),
-                        ("peg_linear_velocity", 3),
+                        ("joint_pos", 3),
+                        ("joint_vel", 3),
                         ("previous_action", 3),
                         ("task_scalar", 1),
                     )
@@ -406,23 +428,36 @@ def test_task_mdp_observation_rows_render_supplied_dimensions_and_total() -> Non
     rows = workbench._mdp_rows("Observation")
 
     assert [(row[0], row[1].split(";", 1)[0]) for row in rows[:-1]] == [
-        ("peg_pos_rel_hole", "dim=3"),
-        ("peg_linear_velocity", "dim=3"),
+        ("joint_pos", "dim=3"),
+        ("joint_vel", "dim=3"),
         ("previous_action", "dim=3"),
         ("task_scalar", "dim=1"),
     ]
     assert rows[-1] == ("Total", "10", "values", "Runtime Probe")
 
 
-def test_reward_gate_explanation_is_deterministic() -> None:
-    outside = explain_reward_gate(
-        reward_name="task_reward", xy_error_m=0.00322, gate_threshold_m=0.003, raw_value=0.0
-    )
-    inside = explain_reward_gate(
-        reward_name="task_reward", xy_error_m=0.002, gate_threshold_m=0.003, raw_value=0.0004
-    )
-    assert "3.22 mm" in outside and "outside" in outside
-    assert "gate is ON" in inside and "+0.000400" in inside
+def test_raw_three_value_action_has_no_derived_xyz_millimetre_row() -> None:
+    class FakeTelemetryTree:
+        def __init__(self) -> None:
+            self.rows: list[tuple[str, tuple[str, str]]] = []
+
+        def delete(self, *_items: str) -> None:
+            self.rows.clear()
+
+        def get_children(self) -> tuple[str, ...]:
+            return ()
+
+        def insert(self, _parent: str, _index: str, *, text: str, values: tuple[str, str]) -> None:
+            self.rows.append((text, values))
+
+    workbench = RobotLearningWorkbench.__new__(RobotLearningWorkbench)
+    workbench.telemetry_tree = FakeTelemetryTree()
+    workbench.probe_data = {"actions": [{"scale": 0.005}]}
+
+    workbench._render_telemetry({"action": [0.2, -0.1, -0.5]})
+
+    assert ("action", ("[0.2, -0.1, -0.5]", "External JSONL")) in workbench.telemetry_tree.rows
+    assert all("physical_delta_xyz_mm" not in name for name, _values in workbench.telemetry_tree.rows)
 
 
 def test_jsonl_tail_reader_returns_latest_complete_object(tmp_path: Path) -> None:

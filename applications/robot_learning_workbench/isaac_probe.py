@@ -308,7 +308,7 @@ def _observation_groups(observations: Any) -> list[dict[str, Any]]:
                     "name": name,
                     "function": _callable_name(cfg.func),
                     "dimension": None,
-                    "unit": _observation_unit(name),
+                    "unit": _observation_unit(),
                     "meaning": _observation_meaning(name),
                     "source": "Task Config",
                 }
@@ -472,15 +472,10 @@ def _asset_role(name: str) -> str:
     return "Scene"
 
 
-def _observation_unit(name: str) -> str:
-    lowered = name.lower()
-    if "velocity" in lowered:
-        return "m/s"
-    if "position" in lowered or "pos" in lowered or "depth" in lowered:
-        return "m"
-    if "action" in lowered:
-        return "normalized"
-    return "unspecified"
+def _observation_unit() -> str:
+    """Return an honest unit when task metadata does not provide one."""
+
+    return "task-defined"
 
 
 def _observation_meaning(name: str) -> str:

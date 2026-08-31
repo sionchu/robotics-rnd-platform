@@ -139,12 +139,6 @@ def session_path(name: str) -> Path:
     return base / name
 
 
-def normalized_to_physical(action: list[float] | tuple[float, ...], scale_m: float) -> list[float]:
-    """Convert normalized relative-position actions to physical metres."""
-
-    return [float(value) * scale_m for value in action]
-
-
 def observation_term_rows(observation_groups: Any) -> list[tuple[str, str, str, str]]:
     """Render canonical observation records without reconstructing runtime semantics."""
 
@@ -245,26 +239,6 @@ def read_last_jsonl_record(path: Path, *, max_bytes: int = 64 * 1024) -> dict[st
         if isinstance(value, dict):
             return value
     return None
-
-
-def explain_reward_gate(
-    *,
-    reward_name: str,
-    xy_error_m: float | None,
-    gate_threshold_m: float | None,
-    raw_value: float | None = None,
-) -> str:
-    """Explain one explicit lateral reward gate without causal speculation."""
-
-    if xy_error_m is None or gate_threshold_m is None:
-        return "Gate metadata or live XY state is unavailable."
-    xy_mm = xy_error_m * 1000.0
-    gate_mm = gate_threshold_m * 1000.0
-    if xy_error_m > gate_threshold_m:
-        return f"{reward_name} = 0 because XY error {xy_mm:.2f} mm is outside the {gate_mm:.2f} mm gate."
-    if raw_value is None:
-        return f"{reward_name} gate is ON because XY error {xy_mm:.2f} mm is within {gate_mm:.2f} mm."
-    return f"{reward_name} gate is ON at XY error {xy_mm:.2f} mm; the measured raw value is {raw_value:+.6f}."
 
 
 def normalize_evaluation(path: Path) -> EvaluationResult:

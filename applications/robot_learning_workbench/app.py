@@ -19,10 +19,8 @@ from .models import (
     ExperimentSummary,
     MetricSeries,
     WorkbenchSettings,
-    explain_reward_gate,
     measured_change,
     normalize_evaluation,
-    normalized_to_physical,
     observation_dimension_consistency,
     observation_term_rows,
     read_last_jsonl_record,
@@ -1282,41 +1280,6 @@ class RobotLearningWorkbench:
         for path, value in self._flatten_telemetry(record):
             self.telemetry_tree.insert("", "end", text=path, values=(self._display(value), "External JSONL"))
 
-        action = self._telemetry_action(record)
-        scale = self._action_scale()
-        if action is not None and scale is not None:
-            physical_mm = [value * 1000.0 for value in normalized_to_physical(action, scale)]
-            self.telemetry_tree.insert(
-                "",
-                "end",
-                text="action.physical_delta_xyz_mm",
-                values=(json.dumps(physical_mm), "Task Config + JSONL"),
-            )
-
-        xy_error = self._numeric_telemetry(record, "xy_error_m")
-        if xy_error is None:
-            xy_error_mm = self._numeric_telemetry(record, "xy_error_mm")
-            xy_error = xy_error_mm / 1000.0 if xy_error_mm is not None else None
-        for reward in self.probe_data.get("rewards", []):
-            gate = reward.get("gate") or {}
-            threshold = gate.get("threshold")
-            if threshold is None:
-                continue
-            reward_name = str(reward.get("name") or "reward")
-            raw_value = self._numeric_telemetry(record, reward_name)
-            explanation = explain_reward_gate(
-                reward_name=reward_name,
-                xy_error_m=xy_error,
-                gate_threshold_m=float(threshold),
-                raw_value=raw_value,
-            )
-            self.telemetry_tree.insert(
-                "",
-                "end",
-                text=f"{reward_name}.gate_explanation",
-                values=(explanation, "Deterministic Workbench Rule"),
-            )
-
     @classmethod
     def _flatten_telemetry(cls, value: Any, prefix: str = "", *, limit: int = 200) -> list[tuple[str, Any]]:
         rows: list[tuple[str, Any]] = []
@@ -1335,48 +1298,6 @@ class RobotLearningWorkbench:
 
         visit(value, prefix)
         return rows
-
-    @classmethod
-    def _telemetry_value(cls, value: Any, key: str) -> Any:
-        if isinstance(value, dict):
-            if key in value:
-                return value[key]
-            for child in value.values():
-                found = cls._telemetry_value(child, key)
-                if found is not None:
-                    return found
-        elif isinstance(value, list):
-            for child in value:
-                found = cls._telemetry_value(child, key)
-                if found is not None:
-                    return found
-        return None
-
-    @classmethod
-    def _numeric_telemetry(cls, record: dict[str, Any], key: str) -> float | None:
-        value = cls._telemetry_value(record, key)
-        if isinstance(value, bool) or not isinstance(value, int | float):
-            return None
-        return float(value)
-
-    @classmethod
-    def _telemetry_action(cls, record: dict[str, Any]) -> list[float] | None:
-        for key in ("normalized_action", "action"):
-            value = cls._telemetry_value(record, key)
-            if (
-                isinstance(value, list | tuple)
-                and len(value) == 3
-                and all(isinstance(item, int | float) and not isinstance(item, bool) for item in value)
-            ):
-                return [float(item) for item in value]
-        return None
-
-    def _action_scale(self) -> float | None:
-        for action in self.probe_data.get("actions", []):
-            scale = action.get("scale")
-            if isinstance(scale, int | float) and not isinstance(scale, bool):
-                return float(scale)
-        return None
 
     def inspect_asset(self) -> None:
         selected = self.asset_tree.selection()
