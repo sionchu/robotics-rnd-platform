@@ -19,9 +19,11 @@ from .models import (
     ExperimentSummary,
     MetricSeries,
     WorkbenchSettings,
+    explain_reward_gate,
     measured_change,
     normalize_evaluation,
     normalized_to_physical,
+    read_last_jsonl_record,
     session_path,
     sha256_file,
     transition_matrix,
@@ -105,6 +107,8 @@ class RobotLearningWorkbench:
         self.runner = ProcessRunner()
         self.metric_series: dict[str, MetricSeries] = {}
         self.evaluations: list[EvaluationResult | None] = [None, None]
+        self.telemetry_path: Path | None = None
+        self.telemetry_signature: tuple[int, int] | None = None
         self.mode_var = tk.StringVar(value=self.settings.presentation_mode or "guided")
         self.envs_var = tk.IntVar(value=64)
         self.seed_var = tk.IntVar(value=42)
@@ -120,6 +124,7 @@ class RobotLearningWorkbench:
         self._build_ui()
         self.refresh_workspace()
         self.root.after(100, self._poll_process)
+        self.root.after(500, self._poll_telemetry)
 
     def _initial_repo_root(self) -> Path:
         configured = Path(self.settings.repo_root) if self.settings.repo_root else None
@@ -355,6 +360,27 @@ class RobotLearningWorkbench:
             self.mdp_detail.column(column, width=width, stretch=column == "value")
         self.mdp_detail.pack(fill="both", expand=True)
         pane.add(right, weight=4)
+        telemetry = ttk.LabelFrame(tab, text="Live Learning / Episode Inspector — external JSONL")
+        telemetry.pack(fill="x", padx=6, pady=(0, 6))
+        telemetry_toolbar = ttk.Frame(telemetry)
+        telemetry_toolbar.pack(fill="x", padx=4, pady=3)
+        ttk.Button(telemetry_toolbar, text="Open Telemetry JSONL...", command=self.choose_telemetry).pack(
+            side="left"
+        )
+        self.telemetry_status_var = tk.StringVar(value="No telemetry file selected.")
+        ttk.Label(telemetry_toolbar, textvariable=self.telemetry_status_var).pack(
+            side="left", fill="x", expand=True, padx=6
+        )
+        self.telemetry_tree = ttk.Treeview(
+            telemetry, columns=("value", "source"), show="tree headings", height=7
+        )
+        self.telemetry_tree.heading("#0", text="State / Action / Reward / Episode")
+        self.telemetry_tree.heading("value", text="Value")
+        self.telemetry_tree.heading("source", text="Source")
+        self.telemetry_tree.column("#0", width=300)
+        self.telemetry_tree.column("value", width=380)
+        self.telemetry_tree.column("source", width=170, stretch=False)
+        self.telemetry_tree.pack(fill="x", padx=4, pady=(0, 4))
         self._build_question_panel(tab)
 
     def _build_question_panel(self, parent: ttk.Frame) -> None:
@@ -842,12 +868,46 @@ class RobotLearningWorkbench:
     def _populate_assets(self) -> None:
         self.asset_tree.delete(*self.asset_tree.get_children())
         self.asset_rows.clear()
-        task_owner = self.current_experiment.task_id if self.current_experiment else ""
+        task_owner = (self.current_experiment.task_id if self.current_experiment else "") or ""
+        rows: list[tuple[str, dict[str, Any], str]] = []
         for index, asset in enumerate(self.probe_data.get("assets", [])):
-            iid = f"task_asset:{index}"
+            rows.append((f"task_asset:{index}", asset, task_owner))
+        for index, asset in enumerate(self.settings.asset_catalog):
+            path = Path(asset.get("path", ""))
+            rows.append(
+                (
+                    f"external_asset:{index}",
+                    {
+                        "name": path.name,
+                        "category": "external scratch asset",
+                        "source": str(path),
+                        "status": "OK" if path.is_file() else "NOT FOUND",
+                        "prim_path": "N/A",
+                        "role": "External Scratch",
+                        "config_class": "Local scratch catalog",
+                    },
+                    "Local Settings",
+                )
+            )
+
+        role_groups: dict[str, str] = {}
+        for iid, asset, owner in rows:
+            role = str(asset.get("role") or "Other")
+            parent = role_groups.get(role)
+            if parent is None:
+                parent = f"asset_group:{len(role_groups)}"
+                role_groups[role] = parent
+                self.asset_tree.insert(
+                    "",
+                    "end",
+                    iid=parent,
+                    text=role,
+                    values=("scene group", "", "", "", role, owner),
+                    open=True,
+                )
             self.asset_rows[iid] = asset
             self.asset_tree.insert(
-                "",
+                parent,
                 "end",
                 iid=iid,
                 text=asset.get("name", "unnamed"),
@@ -856,29 +916,9 @@ class RobotLearningWorkbench:
                     asset.get("source"),
                     asset.get("status"),
                     asset.get("prim_path"),
-                    asset.get("role"),
-                    task_owner,
+                    role,
+                    owner,
                 ),
-            )
-        for index, asset in enumerate(self.settings.asset_catalog):
-            path = Path(asset.get("path", ""))
-            row = {
-                "name": path.name,
-                "category": "external scratch asset",
-                "source": str(path),
-                "status": "OK" if path.is_file() else "NOT FOUND",
-                "prim_path": "N/A",
-                "role": "Unassigned",
-                "config_class": "Local scratch catalog",
-            }
-            iid = f"external_asset:{index}"
-            self.asset_rows[iid] = row
-            self.asset_tree.insert(
-                "",
-                "end",
-                iid=iid,
-                text=path.name,
-                values=(row["category"], row["source"], row["status"], "N/A", "Unassigned", "Local Settings"),
             )
 
     def probe_task(self) -> None:
@@ -1221,11 +1261,153 @@ class RobotLearningWorkbench:
             self.settings.save()
         self._populate_assets()
 
+    def choose_telemetry(self) -> None:
+        selected = filedialog.askopenfilename(
+            title="Open external single-environment telemetry",
+            filetypes=(("JSON Lines", "*.jsonl"), ("All files", "*.*")),
+        )
+        if not selected:
+            return
+        self.telemetry_path = Path(selected)
+        self.telemetry_signature = None
+        self._load_telemetry_if_changed(force=True)
+
+    def _poll_telemetry(self) -> None:
+        self._load_telemetry_if_changed()
+        self.root.after(500, self._poll_telemetry)
+
+    def _load_telemetry_if_changed(self, *, force: bool = False) -> None:
+        path = self.telemetry_path
+        if path is None:
+            return
+        try:
+            stat = path.stat()
+        except OSError:
+            self.telemetry_status_var.set(f"NOT FOUND: {path}")
+            return
+        signature = (stat.st_mtime_ns, stat.st_size)
+        if not force and signature == self.telemetry_signature:
+            return
+        self.telemetry_signature = signature
+        record = read_last_jsonl_record(path)
+        if record is None:
+            self.telemetry_tree.delete(*self.telemetry_tree.get_children())
+            self.telemetry_status_var.set(f"No complete JSON object: {path}")
+            return
+        self.telemetry_status_var.set(f"Tailing latest complete record: {path}")
+        self._render_telemetry(record)
+
+    def _render_telemetry(self, record: dict[str, Any]) -> None:
+        self.telemetry_tree.delete(*self.telemetry_tree.get_children())
+        for path, value in self._flatten_telemetry(record):
+            self.telemetry_tree.insert("", "end", text=path, values=(self._display(value), "External JSONL"))
+
+        action = self._telemetry_action(record)
+        scale = self._action_scale()
+        if action is not None and scale is not None:
+            physical_mm = [value * 1000.0 for value in normalized_to_physical(action, scale)]
+            self.telemetry_tree.insert(
+                "",
+                "end",
+                text="action.physical_delta_xyz_mm",
+                values=(json.dumps(physical_mm), "Task Config + JSONL"),
+            )
+
+        xy_error = self._numeric_telemetry(record, "xy_error_m")
+        if xy_error is None:
+            xy_error_mm = self._numeric_telemetry(record, "xy_error_mm")
+            xy_error = xy_error_mm / 1000.0 if xy_error_mm is not None else None
+        for reward in self.probe_data.get("rewards", []):
+            gate = reward.get("gate") or {}
+            threshold = gate.get("threshold")
+            if threshold is None:
+                continue
+            reward_name = str(reward.get("name") or "reward")
+            raw_value = self._numeric_telemetry(record, reward_name)
+            explanation = explain_reward_gate(
+                reward_name=reward_name,
+                xy_error_m=xy_error,
+                gate_threshold_m=float(threshold),
+                raw_value=raw_value,
+            )
+            self.telemetry_tree.insert(
+                "",
+                "end",
+                text=f"{reward_name}.gate_explanation",
+                values=(explanation, "Deterministic Workbench Rule"),
+            )
+
+    @classmethod
+    def _flatten_telemetry(cls, value: Any, prefix: str = "", *, limit: int = 200) -> list[tuple[str, Any]]:
+        rows: list[tuple[str, Any]] = []
+
+        def visit(item: Any, path: str) -> None:
+            if len(rows) >= limit:
+                return
+            if isinstance(item, dict):
+                for key, child in item.items():
+                    visit(child, f"{path}.{key}" if path else str(key))
+            elif isinstance(item, list) and any(isinstance(child, dict | list) for child in item):
+                for index, child in enumerate(item):
+                    visit(child, f"{path}[{index}]")
+            else:
+                rows.append((path or "record", item))
+
+        visit(value, prefix)
+        return rows
+
+    @classmethod
+    def _telemetry_value(cls, value: Any, key: str) -> Any:
+        if isinstance(value, dict):
+            if key in value:
+                return value[key]
+            for child in value.values():
+                found = cls._telemetry_value(child, key)
+                if found is not None:
+                    return found
+        elif isinstance(value, list):
+            for child in value:
+                found = cls._telemetry_value(child, key)
+                if found is not None:
+                    return found
+        return None
+
+    @classmethod
+    def _numeric_telemetry(cls, record: dict[str, Any], key: str) -> float | None:
+        value = cls._telemetry_value(record, key)
+        if isinstance(value, bool) or not isinstance(value, int | float):
+            return None
+        return float(value)
+
+    @classmethod
+    def _telemetry_action(cls, record: dict[str, Any]) -> list[float] | None:
+        for key in ("normalized_action", "action"):
+            value = cls._telemetry_value(record, key)
+            if (
+                isinstance(value, list | tuple)
+                and len(value) == 3
+                and all(isinstance(item, int | float) and not isinstance(item, bool) for item in value)
+            ):
+                return [float(item) for item in value]
+        return None
+
+    def _action_scale(self) -> float | None:
+        for action in self.probe_data.get("actions", []):
+            scale = action.get("scale")
+            if isinstance(scale, int | float) and not isinstance(scale, bool):
+                return float(scale)
+        scale = (self.probe_data.get("constants") or {}).get("ACTION_SCALE_M")
+        if isinstance(scale, int | float) and not isinstance(scale, bool):
+            return float(scale)
+        return None
+
     def inspect_asset(self) -> None:
         selected = self.asset_tree.selection()
         if not selected:
             return
-        asset = self.asset_rows.get(selected[0], {})
+        asset = self.asset_rows.get(selected[0])
+        if not asset:
+            return
         self.inspector.show(
             asset.get("name", "Asset"), asset, "No asset is copied or converted by inspection."
         )

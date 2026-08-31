@@ -12,6 +12,7 @@ from applications.robot_learning_workbench.models import (
     explain_reward_gate,
     normalize_evaluation,
     normalized_to_physical,
+    read_last_jsonl_record,
     sha256_file,
     transition_matrix,
 )
@@ -194,6 +195,19 @@ def test_reward_gate_explanation_is_deterministic() -> None:
     )
     assert "3.22 mm" in outside and "outside" in outside
     assert "gate is ON" in inside and "+0.000400" in inside
+
+
+def test_jsonl_tail_reader_returns_latest_complete_object(tmp_path: Path) -> None:
+    telemetry = tmp_path / "episode.jsonl"
+    telemetry.write_text(
+        '{"step": 1, "success": false}\nnot-json\n{"step": 2, "state": {"xy_error_m": 0.00322}}\n{"step":',
+        encoding="utf-8",
+    )
+
+    assert read_last_jsonl_record(telemetry) == {
+        "step": 2,
+        "state": {"xy_error_m": 0.00322},
+    }
 
 
 def test_checkpoint_hash_and_desktop_import_boundary(tmp_path: Path) -> None:
